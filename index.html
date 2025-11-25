@@ -38,8 +38,10 @@
             touch-action: manipulation; 
             transition: color 0.2s, transform 0.1s;
         }
-        .nav-item.active { color: #4F46E5; font-weight: bold; }
-        .nav-item.inactive { color: #9CA3AF; }
+        /* [修改] 讓 active 顏色在新的淺色背景上保持清晰 */
+        .nav-item.active { color: #4F46E5; font-weight: bold; } 
+        /* [修改] 讓 inactive 顏色在新的淺色背景上保持清晰 */
+        .nav-item.inactive { color: #9CA3AF; } 
         .nav-item:active { transform: scale(0.95); } 
         
         /* 避免 iOS 輸入框放大 */
@@ -72,31 +74,30 @@
 
 <body onload="init()">
     
-    <nav id="top-nav" class="fixed top-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800 shadow-2xl z-50">
-        <div class="max-w-lg mx-auto flex justify-around items-center h-24 text-white"> 
-            <button id="tab-members" onclick="switchTab('members')" class="nav-item flex flex-col items-center p-2 pt-3 active text-indigo-400">
+    <nav id="top-nav" class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-lg z-50">
+        <div class="max-w-lg mx-auto flex justify-around items-center h-24 text-gray-700"> 
+            <button id="tab-members" onclick="switchTab('members')" class="nav-item flex flex-col items-center p-2 pt-3 active text-indigo-600">
                 <i class="fa-solid fa-users text-xl"></i>
                 <span class="text-xs mt-1">大家</span>
             </button>
-            <button id="tab-expenses" onclick="switchTab('expenses')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+            <button id="tab-expenses" onclick="switchTab('expenses')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-gray-500">
                 <i class="fa-solid fa-receipt text-xl"></i>
                 <span class="text-xs mt-1">記帳</span>
             </button>
-            <button id="tab-result" onclick="switchTab('result')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+            <button id="tab-result" onclick="switchTab('result')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-gray-500">
                 <i class="fa-solid fa-calculator text-xl"></i>
                 <span class="text-xs mt-1">算錢</span>
             </button>
-            <button id="tab-rates" onclick="switchTab('rates')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+            <button id="tab-rates" onclick="switchTab('rates')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-gray-500">
                 <i class="fa-solid fa-money-bill-transfer text-xl"></i>
                 <span class="text-xs mt-1">匯率</span>
             </button>
-            <button id="tab-settings" onclick="switchTab('settings')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+            <button id="tab-settings" onclick="switchTab('settings')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-gray-500">
                 <i class="fa-solid fa-cog text-xl"></i>
                 <span class="text-xs mt-1">設定</span>
             </button>
         </div>
     </nav>
-    
     <div class="max-w-lg mx-auto p-4 pt-6">
 
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 mb-6 flex items-center">
@@ -249,44 +250,54 @@
                 </button>
             </div>
 
-            <div>
-                <h3 class="text-xl font-bold text-gray-700 mb-3 ml-2">最近記了什麼?</h3>
+            <div id="capture-expenses-list-container">
+                <div class="flex justify-between items-center mb-3 ml-2">
+                    <h3 class="text-xl font-bold text-gray-700">最近記了什麼?</h3>
+                    <button onclick="captureAndShare('capture-expenses-list-container')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-bold text-sm shadow btn-big hover:bg-indigo-700">
+                        <i class="fa-solid fa-camera mr-1"></i> 截圖分享
+                    </button>
+                </div>
                 <div id="expenses-list" class="space-y-3 pb-20">
                     </div>
             </div>
-        </section>
+            </section>
 
-        <section id="view-result" class="space-y-6 animate-fade-in pb-10 hidden">
-            <h2 class="text-2xl font-bold text-center text-gray-900 mb-6 flex justify-center items-center">
-                <span class="bg-yellow-100 p-2 rounded-full mr-2"><i class="fa-solid fa-receipt text-yellow-500"></i></span> 結算結果 (<span class="current-base-cur">TWD</span>)
-            </h2>
+        <section id="view-result" class="animate-fade-in pb-10 hidden">
+            <div id="view-result-content" class="space-y-6">
+                <h2 class="text-2xl font-bold text-center text-gray-900 mb-6 flex justify-center items-center">
+                    <span class="bg-yellow-100 p-2 rounded-full mr-2"><i class="fa-solid fa-receipt text-yellow-500"></i></span> 結算結果 (<span class="current-base-cur">TWD</span>)
+                </h2>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-red-50 p-4 rounded-2xl shadow-md border-b-4 border-red-400">
-                    <p class="text-sm font-medium text-red-500">總花費 (結算幣別)</p>
-                    <p id="total-spend" class="text-2xl font-bold text-red-600 mt-1">0</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded-2xl shadow-md border-b-4 border-green-400">
-                    <p class="text-sm font-medium text-green-700">總預付/公費 (結算幣別)</p>
-                    <p id="total-prepaid" class="text-2xl font-bold text-green-700 mt-1">0</p>
-                </div>
-            </div>
-
-            <div id="member-balance-list" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-red-50 p-4 rounded-2xl shadow-md border-b-4 border-red-400">
+                        <p class="text-sm font-medium text-red-500">總花費 (結算幣別)</p>
+                        <p id="total-spend" class="text-2xl font-bold text-red-600 mt-1">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-2xl shadow-md border-b-4 border-green-400">
+                        <p class="text-sm font-medium text-green-700">總預付/公費 (結算幣別)</p>
+                        <p id="total-prepaid" class="text-2xl font-bold text-green-700 mt-1">0</p>
+                    </div>
                 </div>
 
-            <div>
-                <h3 class="text-xl font-bold text-gray-700 mb-3 ml-2 flex items-center">
-                    <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 mr-2"></i> 轉帳結算計畫
-                </h3>
-                <div id="settlement-plan" class="space-y-3">
-                    <div id="plan-loading" class="text-center text-gray-400 py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-lg">
-                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> 正在計算...
+                <div id="member-balance-list" class="space-y-3">
+                    </div>
+
+                <div>
+                    <h3 class="text-xl font-bold text-gray-700 mb-3 ml-2 flex items-center">
+                        <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 mr-2"></i> 轉帳結算計畫
+                    </h3>
+                    <div id="settlement-plan" class="space-y-3">
+                        <div id="plan-loading" class="text-center text-gray-400 py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-lg">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i> 正在計算...
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3">
+            <div class="grid grid-cols-1 gap-3 mt-6">
+                <button onclick="captureAndShare('view-result-content')" class="bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow hover:bg-indigo-700 btn-big">
+                    <i class="fa-solid fa-camera mr-2"></i> 截圖分享算錢結果
+                </button>
                 <button onclick="copyReport()" class="bg-gray-800 text-white py-4 rounded-2xl font-bold text-lg shadow hover:bg-black btn-big">
                     <i class="fa-solid fa-copy mr-2"></i> 複製算錢結果 (傳LINE)
                 </button>
@@ -294,15 +305,19 @@
             
             <div class="h-10"></div>
         </section>
-
         <section id="view-rates" class="space-y-6 animate-fade-in pb-10 hidden"> 
             
-            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-indigo-400">
+            <div id="capture-calc-container" class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-indigo-400">
                 <div class="flex justify-between items-start mb-2"> 
                     <h3 class="text-xl font-bold text-gray-800 flex items-center"> 
                         <i class="fa-solid fa-calculator text-indigo-500 mr-2"></i> 換匯計算機 
                     </h3> 
-                    <span id="rate-source-badge" class="text-xs bg-gray-200 text-gray-500 px-2 py-1 rounded font-bold">載入中...</span>
+                    <div class="flex items-center space-x-2">
+                        <span id="rate-source-badge" class="text-xs bg-gray-200 text-gray-500 px-2 py-1 rounded font-bold">載入中...</span>
+                        <button onclick="captureAndShare('capture-calc-container')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-bold text-sm shadow btn-big hover:bg-indigo-700">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+                    </div>
                 </div> 
                 <div class="flex flex-col gap-3"> 
                     <div class="space-y-2"> 
@@ -324,7 +339,6 @@
                     <p class="text-4xl font-bold text-indigo-600"><span id="calc-result-amount">0</span> <span id="calc-result-cur" class="text-lg">TWD</span></p> 
                 </div> 
             </div>
-            
             <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-yellow-400">
                 <h3 class="text-xl font-bold text-gray-800 flex items-center mb-4">
                     <i class="fa-solid fa-cloud-arrow-down text-yellow-600 mr-2"></i> 即時匯率參考 (TWD 基準)
@@ -426,12 +440,13 @@
                     <input type="text" id="edit-title" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-gray-500 font-bold mb-1 text-sm">金額與幣別</label>
-                    <div class="flex gap-2">
-                        <input type="number" id="edit-amount" step="0.01" class="flex-1 border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
-                        <select id="edit-currency" class="w-1/3 border-2 border-gray-300 rounded-xl px-2 py-2 font-bold text-lg text-center">
-                            </select>
-                    </div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">金額</label>
+                    <input type="number" id="edit-amount" step="0.01" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">幣別</label>
+                    <select id="edit-currency" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg text-center">
+                        </select>
                 </div>
                 <div>
                     <label class="block text-gray-500 font-bold mb-1 text-sm">日期 (YYYY-MM-DD)</label>
@@ -457,50 +472,40 @@
         </div>
     </div>
 
-    <div id="member-tag-modal" class="fixed inset-0 z-[60] hidden flex justify-center items-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeMemberTagModal()"></div>
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state" id="tag-panel">
-            <h3 class="text-2xl font-bold text-gray-900 mb-4 text-center border-b pb-3">編輯標籤：<span id="member-tag-name"></span></h3>
-            <div id="member-tags-list" class="flex flex-wrap gap-2 max-h-80 overflow-y-auto">
-                </div>
-            <button onclick="closeMemberTagModal()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow-md btn-big mt-6">完成</button>
-        </div>
-    </div>
-
-    <div id="custom-modal" class="fixed inset-0 z-[70] hidden flex justify-center items-center p-4">
+    <div id="confirm-modal" class="fixed inset-0 z-[70] hidden flex justify-center items-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state">
-            <div id="modal-icon" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-3xl">
-                <i class="fa-solid"></i>
+        <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl relative modal-base modal-hidden-state" id="confirm-panel">
+            <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-3">標題</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">訊息</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow hover:bg-gray-300 btn-big">取消</button>
+                <button onclick="handleConfirm()" id="confirm-button" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold text-lg shadow hover:bg-red-700 btn-big">確定</button>
             </div>
-            <div class="mt-3 text-center sm:mt-5">
-                <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title"></h3>
-                <div class="mt-2">
-                    <p class="text-sm text-gray-500" id="modal-message"></p>
-                </div>
-            </div>
-            <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3" id="modal-actions">
-                </div>
         </div>
     </div>
 
-    <div id="toast-container" class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-xs z-[80] transition-all duration-300 ease-in-out" style="transform: translate(-50%, -100%); opacity: 0;">
-        <div class="mt-4 p-4 rounded-xl shadow-xl flex items-center space-x-3 text-white">
+    <div id="toast-container" class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-xs z-[80] transition-all duration-300 ease-in-out -translate-y-full">
+        <div class="flex items-center p-4 mt-1 bg-gray-900/90 text-white rounded-xl shadow-xl space-x-3">
             <div id="toast-icon"></div>
-            <div id="toast-message" class="font-medium text-sm"></div>
+            <span id="toast-message" class="font-bold text-sm flex-1">訊息</span>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-        const STORAGE_KEY = 'travel_bookkeeper_v8_data';
+        const STORAGE_KEY = 'travelBookkeepingDataV89a';
+        const ALL_CURRENCIES = ["TWD", "USD", "EUR", "JPY", "CNY", "KRW", "HKD", "THB", "AUD", "GBP", "CAD"];
         const DEFAULT_EXCHANGE_RATES = {
-            'TWD': 1.0, 'USD': 30.0, 'EUR': 32.0, 'JPY': 0.2, 'CNY': 4.0, 'KRW': 0.023, 'THB': 0.85
+            "TWD": 1.0, "USD": 32.0, "EUR": 34.0, "JPY": 0.22, "CNY": 4.4, "KRW": 0.026, 
+            "HKD": 4.1, "THB": 0.9, "AUD": 21.0, "GBP": 39.0, "CAD": 23.0
         };
-        const ALL_CURRENCIES = ['TWD', 'USD', 'EUR', 'JPY', 'CNY', 'KRW', 'THB'];
-        const DEFAULT_TAGS = [{ key: 'public', name: '公費' }, { key: 'driver', name: '司機' }];
-        
+        const DEFAULT_TAGS = [
+            { key: 'driver', name: '🚗 司機' },
+            { key: 'photographer', name: '📸 攝影師' },
+            { key: 'planner', name: '📋 規劃' }
+        ];
+
         let localStorageIsAvailable = false;
-        
         function checkLocalStorageAvailability() {
             if (typeof localStorage !== 'undefined') {
                 try {
@@ -528,6 +533,44 @@
         let currentModal = null;
         let currentOnConfirm = null;
 
+        // --- Screenshot and Sharing Logic (3, 4, 5) ---
+        function captureAndShare(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                showToast('截圖目標不存在', 'error');
+                return;
+            }
+
+            showToast('正在生成截圖...', 'info', 1500);
+            
+            // Use a small delay for better rendering sync
+            setTimeout(() => {
+                html2canvas(element, {
+                    scale: 2, // Higher scale for better quality
+                    useCORS: true, 
+                    logging: false,
+                    backgroundColor: '#FFFBEB', // 保持背景色一致
+                    removeContainer: true // Clean up the temporary canvas container
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // Fallback to image display in new window for easy saving/sharing
+                    const newWindow = window.open();
+                    if (newWindow) {
+                        newWindow.document.write('<img src="' + imgData + '" style="width:100%; height:auto; display: block; border: none;">');
+                        newWindow.document.title = '旅行記帳本截圖';
+                        newWindow.focus();
+                        showToast('截圖已在新視窗開啟，請長按/右鍵儲存或分享', 'success', 3000);
+                    } else {
+                        showToast('截圖失敗：請允許彈出視窗', 'error');
+                    }
+                }).catch(err => {
+                    console.error('html2canvas failed:', err);
+                    showToast('截圖失敗：請檢查網頁內容', 'error');
+                });
+            }, 100); 
+        }
+
         // --- Data Persistence and Initialization ---
         function loadData() {
             checkLocalStorageAvailability();
@@ -540,7 +583,6 @@
                     console.error("Error retrieving data from localStorage:", e);
                 }
             }
-
             if (stored) {
                 data = JSON.parse(stored);
             } else {
@@ -566,58 +608,84 @@
             if (!data.members) data.members = [];
             if (!data.favorites) data.favorites = [];
             
-            data.exchangeRates['TWD'] = 1.0; // 確保公款代墊人存在
-            if (data.members.length > 0 && (!data.publicFeeCollectorId || !data.members.find(m => m.id === data.publicFeeCollectorId))) {
+            data.exchangeRates['TWD'] = 1.0; 
+
+            // 確保公款代墊人存在
+            if (data.members.length > 0 && !data.members.some(m => m.id === data.publicFeeCollectorId)) {
                 data.publicFeeCollectorId = data.members[0].id;
+            } else if (data.members.length === 0) {
+                data.publicFeeCollectorId = '';
             }
         }
 
-        function saveData() {
+        function saveData(silent = false) {
             if (localStorageIsAvailable) {
                 try {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                    if (!silent) {
+                        // Re-render only affected components after data change
+                        renderMembersList();
+                        renderPublicFeeCollectorSelect();
+                        renderTargetCheckboxes();
+                        renderExpensesList();
+                        renderRatesList();
+                        renderBaseCurrencySelect();
+                        renderCurrencyOptions();
+                        renderTagsSetting();
+                        renderFavorites();
+                        calculatePublicFeeBalance();
+                        // 確保結算結果在背景更新
+                        if (document.getElementById('view-result').classList.contains('hidden')) {
+                            calculateSettlement();
+                        } else {
+                            calculateSettlement(true);
+                        }
+                    }
                 } catch (e) {
-                    showToast('⚠ 資料儲存失敗！', 'error');
+                    console.error("Error saving data to localStorage:", e);
+                    showToast('⚠ 儲存資料失敗', 'error');
                 }
+            } else if (!silent) {
+                showToast('⚠ 儲存失敗：本地儲存不可用', 'error');
             }
-            // Re-render UI after saving
-            renderMembers();
-            renderTargetList();
-            renderCurrencyOptions();
-            renderRatesList();
-            renderExpensesList();
-            renderFavorites();
-            calculateSettlement();
-            updateBaseCurrencyDisplay();
         }
 
         function init() {
             loadData();
-            switchTab('members');
-            fetchLiveRates();
+            renderBaseCurrencySelect();
+            renderMembersList();
+            renderPublicFeeCollectorSelect();
+            renderTargetCheckboxes();
+            renderExpensesList();
+            renderRatesList();
+            renderCurrencyOptions();
+            renderTagsSetting();
+            renderFavorites();
+            calculatePublicFeeBalance();
+            // 首次載入只計算一次，不強制重新計算
+            calculateSettlement(); 
+            // 預設切換到第一個 tab
+            switchTab('members'); 
         }
 
         // --- Utility Functions ---
 
-        function getRateToBase(currency) {
-            // Rate: 1 [currency] = ? [baseCurrency]
-            // We store TWD-based rates: 1 [currency] = ? TWD
-            // Base Rate: 1 [baseCurrency] = ? TWD
-            
+        const getRateToBase = (currency) => {
+            const baseCur = data.baseCurrency;
+            if (currency === baseCur) return 1.0;
             const rateToTWD = data.exchangeRates[currency] || DEFAULT_EXCHANGE_RATES[currency] || 1.0;
-            const baseToTwdRate = data.exchangeRates[data.baseCurrency] || 1.0;
-            
-            // Formula: (1 [currency] = rateToTWD TWD) / (1 [baseCurrency] = baseToTwdRate TWD)
-            // If baseCurrency is TWD, baseToTwdRate is 1.0. Result is rateToTWD.
-            // If baseCurrency is USD, baseToTwdRate is ~30. Result is rateToTWD / 30.
-            return parseFloat((rateToTWD / baseToTwdRate).toFixed(4));
-        }
+            const baseToTWD = data.exchangeRates[baseCur] || 1.0;
+            // 1 Unit of Currency = X Unit of BaseCurrency
+            return rateToTWD / baseToTWD;
+        };
 
-        function updateBaseCurrencyDisplay() {
-            document.querySelectorAll('.current-base-cur').forEach(el => {
-                el.textContent = data.baseCurrency;
-            });
-        }
+        const getRate = (fromCur, toCur) => {
+            if (fromCur === toCur) return 1.0;
+            const rateFromToTWD = data.exchangeRates[fromCur] || DEFAULT_EXCHANGE_RATES[fromCur] || 1.0;
+            const rateToToTWD = data.exchangeRates[toCur] || DEFAULT_EXCHANGE_RATES[toCur] || 1.0;
+            // 1 Unit of FromCur = X Unit of ToCur
+            return rateFromToTWD / rateToToTWD;
+        };
 
         function switchTab(tab) {
             const views = ['members', 'expenses', 'result', 'rates', 'settings'];
@@ -626,8 +694,10 @@
                 const tabEl = document.getElementById(`tab-${view}`);
                 if (view === tab) {
                     viewEl.classList.remove('hidden');
-                    tabEl.classList.remove('inactive', 'text-white/60');
-                    tabEl.classList.add('active', 'text-indigo-400');
+                    // [修改] 移除舊/新 inactive 顏色並加上新 active 顏色 (適用於新的淺色導覽列)
+                    tabEl.classList.remove('inactive', 'text-white/60', 'text-gray-500'); 
+                    tabEl.classList.add('active', 'text-indigo-600'); 
+                    tabEl.classList.remove('text-indigo-400');
                     // 重新計算結算結果
                     if (tab === 'result') {
                         calculateSettlement(true);
@@ -640,8 +710,10 @@
                     }
                 } else {
                     viewEl.classList.add('hidden');
-                    tabEl.classList.remove('active', 'text-indigo-400');
-                    tabEl.classList.add('inactive', 'text-white/60');
+                    // [修改] 移除舊/新 active 顏色並加上新 inactive 顏色 (適用於新的淺色導覽列)
+                    tabEl.classList.remove('active', 'text-indigo-400', 'text-indigo-600'); 
+                    tabEl.classList.add('inactive', 'text-gray-500'); 
+                    tabEl.classList.remove('text-white/60');
                 }
             });
         }
@@ -656,76 +728,57 @@
             // Reset classes
             toast.className = 'fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-xs z-[80] transition-all duration-300 ease-in-out';
             iconEl.className = '';
-            
+
+            let bgColorClass = 'bg-gray-900/90';
+
             if (type === 'success') {
                 iconEl.classList.add('fa-solid', 'fa-circle-check', 'text-green-400', 'text-2xl');
-                toast.classList.add('bg-gray-900/90');
             } else if (type === 'error') {
                 iconEl.classList.add('fa-solid', 'fa-circle-xmark', 'text-red-400', 'text-2xl');
-                toast.classList.add('bg-red-600/90');
+                bgColorClass = 'bg-red-600/90';
             } else if (type === 'warning') {
                 iconEl.classList.add('fa-solid', 'fa-triangle-exclamation', 'text-yellow-400', 'text-2xl');
-                toast.classList.add('bg-yellow-600/90');
-            } else {
-                iconEl.classList.add('fa-solid', 'fa-info', 'text-blue-400', 'text-2xl');
-                toast.classList.add('bg-gray-900/90');
+            } else { // info or default
+                iconEl.classList.add('fa-solid', 'fa-circle-info', 'text-indigo-400', 'text-2xl');
             }
-            
+
             msgEl.textContent = msg;
+            toast.classList.add(bgColorClass);
+            toast.classList.add('translate-y-0');
 
-            // Show
-            toast.style.opacity = '1';
-            toast.style.transform = 'translate(-50%, 0)';
-
-            // Hide after duration
-            clearTimeout(toast.timer);
-            toast.timer = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-50%, -100%)';
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0');
+                toast.classList.add('-translate-y-full');
             }, duration);
         }
 
-        function showModal(type, title, message, onConfirm = null) {
-            const modal = document.getElementById('custom-modal');
-            const panel = modal.querySelector('div:last-child');
-            const iconEl = document.getElementById('modal-icon');
-            const titleEl = document.getElementById('modal-title');
-            const messageEl = document.getElementById('modal-message');
-            const actionsEl = document.getElementById('modal-actions');
-            
+        function showModal(type, title, message, onConfirm, confirmText = '確定') {
+            const modal = document.getElementById('confirm-modal');
+            const panel = document.getElementById('confirm-panel');
+            const titleEl = document.getElementById('confirm-title');
+            const msgEl = document.getElementById('confirm-message');
+            const confirmBtn = document.getElementById('confirm-button');
+
+            if (!modal || !panel) return;
+
             currentModal = modal;
             currentOnConfirm = onConfirm;
 
             titleEl.textContent = title;
-            messageEl.textContent = message;
-            
-            iconEl.className = '';
-            iconEl.classList.add('mx-auto', 'flex', 'items-center', 'justify-center', 'h-16', 'w-16', 'rounded-full', 'text-3xl');
-            iconEl.querySelector('i').className = 'fa-solid';
-            
-            actionsEl.innerHTML = '';
+            msgEl.textContent = message;
+            confirmBtn.textContent = confirmText;
 
+            confirmBtn.className = 'flex-1 py-3 rounded-xl font-bold text-lg shadow btn-big';
             if (type === 'confirm') {
-                iconEl.classList.add('bg-red-100', 'text-red-500');
-                iconEl.querySelector('i').classList.add('fa-triangle-exclamation');
-
-                actionsEl.innerHTML = `
-                    <button type="button" onclick="handleConfirm()" class="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm btn-big">
-                        確定
-                    </button>
-                    <button type="button" onclick="closeModal()" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm btn-big">
-                        取消
-                    </button>
-                `;
-            } else if (type === 'info') {
-                iconEl.classList.add('bg-blue-100', 'text-blue-500');
-                iconEl.querySelector('i').classList.add('fa-info');
-                
-                actionsEl.innerHTML = `
-                    <button type="button" onclick="closeModal()" class="mt-3 inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm btn-big">
-                        了解
-                    </button>
-                `;
+                confirmBtn.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+            } else {
+                confirmBtn.classList.add('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+            }
+            
+            // Set up CANCEL button
+            const cancelBtn = modal.querySelector('button:first-child');
+            if (cancelBtn) {
+                cancelBtn.textContent = (type === 'confirm') ? '取消' : '關閉';
             }
 
             modal.classList.remove('hidden');
@@ -765,14 +818,14 @@
                 renderCurrencyOptions('exp-currency');
                 renderCurrencyOptions('calc-from');
                 renderCurrencyOptions('calc-to');
+                // Don't forget the edit modal select
+                renderCurrencyOptions('edit-currency'); 
                 return;
             }
-            
+
             selects.forEach(selectEl => {
-                selectEl.innerHTML = ALL_CURRENCIES.map(c => 
-                    `<option value="${c}">${c}</option>`
-                ).join('');
-                
+                selectEl.innerHTML = ALL_CURRENCIES.map(c => `<option value="${c}">${c}</option>` ).join('');
+
                 // Set default value based on ID
                 if (selectId === 'base-currency-select') {
                     selectEl.value = data.baseCurrency;
@@ -784,6 +837,7 @@
                     selectEl.value = 'USD';
                 }
             });
+
             // Update calculator if rates list is present
             if (document.getElementById('rates-list')) {
                 updateCalculator();
@@ -793,124 +847,131 @@
         function renderRatesList() {
             const list = document.getElementById('rates-list');
             if (!list) return;
-            
+
             const baseToTwdRate = data.exchangeRates[data.baseCurrency] || 1.0;
-            
+
             const ratesHtml = ALL_CURRENCIES
                 .filter(c => c !== data.baseCurrency)
                 .map(c => {
                     const rateToTWD = data.exchangeRates[c] || DEFAULT_EXCHANGE_RATES[c] || 1.0;
-                    const rateToDisplay = rateToTWD / baseToTwdRate;
+                    const rateToDisplay = rateToTWD / baseToTwdRate; // 1 Other = ? Base
+                    const displayRate = rateToDisplay.toFixed(4);
                     
                     return `
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2">
-                            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
-                                <div class="font-bold text-indigo-600 text-lg">1 ${c}</div>
-                                <div class="font-bold text-gray-500 text-sm"> = ? ${data.baseCurrency}</div>
+                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+                            <span class="font-bold text-lg text-gray-800 flex-1">${c}</span>
+                            <div class="flex items-center space-x-2">
+                                <input 
+                                    onchange="updateRate('${c}', this.value)" 
+                                    type="number" 
+                                    value="${displayRate}" 
+                                    step="0.0001" 
+                                    inputmode="decimal"
+                                    class="text-xl font-bold text-right text-indigo-600 w-24 border-none bg-transparent focus:bg-white rounded-md p-1"
+                                >
                             </div>
-                            <input type="number" step="0.0001" value="${rateToDisplay.toFixed(4)}" onchange="updateRate('${c}', this.value)" 
-                                class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-right font-mono text-indigo-600 font-bold text-lg bg-gray-50 focus:border-indigo-500"
-                            >
-                        </div>
-                    `;
-                })
-                .join('');
-            
-            list.innerHTML = ratesHtml;
-
-            const titleSpan = document.querySelector('#rate-list-display h3 .current-base-cur');
-            if (titleSpan) titleSpan.textContent = data.baseCurrency;
-        }
-
-        function renderMembers() {
-            const collSelect = document.getElementById('public-fee-collector-select');
-            if(collSelect) collSelect.innerHTML = data.members.map(m => 
-                `<option value="${m.id}" ${m.id === data.publicFeeCollectorId ? 'selected' : ''}>${m.name}</option>`
-            ).join('');
-
-            const list = document.getElementById('members-list');
-            if (!list) return;
-
-            if (data.members.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">👻 還沒有人喔，快加人！</div>';
-            } else {
-                list.innerHTML = data.members.map(m => {
-                    const tagsHtml = m.tags.map(k => {
-                        const t = data.customTags.find(t => t.key === k);
-                        return t ? `<span class="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full text-xs font-medium">${t.name}</span>` : '';
-                    }).join('');
-
-                    const totalPrepaidBase = (m.prepaid * getRateToBase(m.prepaidCurrency)).toFixed(2);
-                    const feeCollectedClass = m.isFeeCollected ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400';
-                    const feeCollectedIcon = m.isFeeCollected ? 'fa-check-circle' : 'fa-circle-xmark';
-                    const feeCollectedText = m.isFeeCollected ? '已繳' : '未繳';
-
-                    return `
-                        <div class="bg-white p-4 rounded-xl shadow-md border-b-4 border-indigo-300 space-y-3">
-                            <div class="flex justify-between items-start">
-                                <h4 class="text-xl font-bold text-gray-800">${m.name} 
-                                    ${m.id === data.publicFeeCollectorId ? '<span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs font-bold ml-2">公款代墊</span>' : ''}
-                                </h4>
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="openMemberTagModal('${m.id}')" class="text-gray-500 hover:text-cyan-500 text-sm"><i class="fa-solid fa-tags"></i> 標籤</button>
-                                    <button onclick="deleteMember('${m.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-2">
-                                <div class="flex justify-between items-center ${feeCollectedClass} p-2 rounded-lg cursor-pointer" onclick="toggleFeeCollected('${m.id}')">
-                                    <span class="font-medium text-gray-700">是否已繳公費?</span>
-                                    <span class="font-bold text-lg text-gray-800 flex items-center">
-                                        <i class="fa-solid ${feeCollectedIcon} mr-2"></i> ${feeCollectedText}
-                                    </span>
-                                </div>
-                                <div class="flex items-center">
-                                    <span class="font-medium text-gray-700 flex-1">預付金額 (${m.prepaidCurrency})</span>
-                                    <input onchange="updatePrepaid('${m.id}', this.value)" type="number" value="${m.prepaid.toFixed(2)}" step="0.01" inputmode="decimal" class="text-xl font-bold text-right text-indigo-600 w-1/2 bg-transparent border-b border-gray-300 focus:border-indigo-500">
-                                </div>
-                                <div class="text-right text-sm text-gray-500 border-t pt-1">
-                                    約 ${totalPrepaidBase} ${data.baseCurrency}
-                                </div>
-                            </div>
-                            
-                            ${tagsHtml ? `<div class="flex flex-wrap gap-1 border-t pt-2">${tagsHtml}</div>` : ''}
                         </div>
                     `;
                 }).join('');
-            }
             
-            const payerSelect = document.getElementById('exp-payer');
-            if (payerSelect) {
-                payerSelect.innerHTML = data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+            list.innerHTML = ratesHtml;
+
+            const rateInfo = document.getElementById('calc-rate-info');
+            const rateSourceBadge = document.getElementById('rate-source-badge');
+            if (rateInfo) {
+                rateInfo.innerText = `使用儲存資料 (基準幣別：${data.baseCurrency})`;
             }
-            renderTargetList();
-            calculatePublicFeeBalance();
-            renderCustomTagsList();
+            if (rateSourceBadge) {
+                rateSourceBadge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold";
+                rateSourceBadge.innerText = "✓ 本地儲存";
+            }
         }
 
-        function renderCustomTagsList() {
-            const list = document.getElementById('custom-tags-list');
-            if (!list) return;
-
-            list.innerHTML = data.customTags.map(t => `
-                <div class="flex items-center bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm font-bold shadow-sm">
-                    ${t.name} 
-                    <button onclick="renameCustomTag('${t.key}')" class="ml-2 text-cyan-500 hover:text-cyan-800"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
-                    <button onclick="deleteCustomTag('${t.key}')" class="ml-2 text-cyan-500 hover:text-red-500"><i class="fa-solid fa-times text-xs"></i></button>
-                </div>
-            `).join('');
+        function renderBaseCurrencySelect() {
+            const baseSelect = document.getElementById('base-currency-select');
+            if (!baseSelect) return;
+            baseSelect.innerHTML = ALL_CURRENCIES.map(c => 
+                `<option value="${c}" ${c === data.baseCurrency ? 'selected' : ''}>${c}</option>`
+            ).join('');
+            // Update all currency display
+            document.querySelectorAll('.current-base-cur').forEach(el => el.textContent = data.baseCurrency);
         }
 
-        function renderTargetList() {
-            const list = document.getElementById('targets-list');
+        function renderPublicFeeCollectorSelect() {
+            const select = document.getElementById('public-fee-collector-select');
+            if (!select) return;
+
+            select.innerHTML = data.members.map(m => 
+                `<option value="${m.id}" ${m.id === data.publicFeeCollectorId ? 'selected' : ''}>${m.name}</option>`
+            ).join('');
+
+            // 如果沒有成員，禁用下拉選單
+            if (data.members.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>請先新增成員</option>';
+            }
+        }
+
+        function renderMembersList() {
+            const list = document.getElementById('members-list');
             if (!list) return;
 
-            list.innerHTML = data.members.map(m => `
-                <div class="flex items-center">
-                    <input type="checkbox" id="target-${m.id}" value="${m.id}" checked class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
-                    <label for="target-${m.id}" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">${m.name}</label>
-                </div>
-            `).join('');
+            list.innerHTML = data.members.map(m => {
+                const tagDisplay = m.tags && m.tags.length > 0 ? m.tags.map(tKey => {
+                    const tag = data.customTags.find(t => t.key === tKey);
+                    return tag ? `<span class="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full text-xs font-bold">${tag.name}</span>` : '';
+                }).join(' ') : '無標籤';
+                const feeCollectedClass = m.isFeeCollected ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400';
+                const feeCollectedIcon = m.isFeeCollected ? 'fa-check-circle' : 'fa-circle-xmark';
+                const feeCollectedText = m.isFeeCollected ? '已繳' : '未繳';
+                
+                return `
+                    <div class="bg-white p-4 rounded-xl shadow-md border-b-4 border-indigo-300 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-xl font-bold text-gray-800">${m.name} ${m.id === data.publicFeeCollectorId ? '<span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs font-bold ml-2">公款代墊</span>' : ''} </h4>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="openMemberTagModal('${m.id}')" class="text-gray-500 hover:text-cyan-500 text-sm"><i class="fa-solid fa-tags"></i> 標籤</button>
+                                <button onclick="deleteMember('${m.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center ${feeCollectedClass} p-2 rounded-lg cursor-pointer" onclick="toggleFeeCollected('${m.id}')">
+                                <span class="font-medium text-gray-700">是否已繳公費?</span>
+                                <span class="font-bold text-lg text-gray-800 flex items-center">
+                                    <i class="fa-solid ${feeCollectedIcon} mr-2"></i> ${feeCollectedText}
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-medium text-gray-700 flex-1">預付金額 (${m.prepaidCurrency})</span>
+                                <input onchange="updatePrepaid('${m.id}', this.value)" type="number" value="${m.prepaid.toFixed(2)}" step="0.01" inputmode="decimal" class="text-xl font-bold text-right text-indigo-600 w-1/3 border-2 border-gray-300 rounded-lg p-1" onblur="this.value=parseFloat(this.value).toFixed(2)">
+                            </div>
+                            <div class="text-sm text-gray-500 mt-1">標籤: ${tagDisplay}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTargetCheckboxes() {
+            const targetsList = document.getElementById('targets-list');
+            const expPayerSelect = document.getElementById('exp-payer');
+            
+            if (targetsList) {
+                targetsList.innerHTML = data.members.map(m => `
+                    <label class="flex items-center cursor-pointer bg-gray-100 p-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-200">
+                        <input type="checkbox" name="target" value="${m.id}" checked class="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2">
+                        ${m.name}
+                    </label>
+                `).join('');
+            }
+
+            if (expPayerSelect) {
+                expPayerSelect.innerHTML = data.members.map(m => 
+                    `<option value="${m.id}" ${m.id === data.publicFeeCollectorId ? 'selected' : ''}>${m.name}</option>`
+                ).join('');
+                if (data.members.length === 0) {
+                    expPayerSelect.innerHTML = '<option value="" disabled selected>請先新增成員</option>';
+                }
+            }
         }
 
         function renderExpensesList() {
@@ -918,54 +979,81 @@
             if (!list) return;
 
             if (data.expenses.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">✍️ 試著記一筆帳吧！</div>';
+                list.innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">目前沒有記帳紀錄</div>';
                 return;
             }
 
-            list.innerHTML = data.expenses.map(e => {
+            // 限制只顯示最近 20 筆
+            const displayExpenses = data.expenses.slice(0, 20);
+
+            list.innerHTML = displayExpenses.map(e => {
                 const payer = data.members.find(m => m.id === e.payerId)?.name || '未知';
-                const targets = e.targets.map(id => data.members.find(m => m.id === id)?.name || '?').join('、');
-                // e.exchangeRate is the rate from e.currency to data.baseCurrency.
+                const targets = e.targets.map(tId => data.members.find(m => m.id === tId)?.name || '未知').join(', ');
+                const isPublic = e.payerId === data.publicFeeCollectorId && e.isPublicFee;
                 const baseAmount = (e.amount * e.exchangeRate).toFixed(2);
-                const isPublic = e.payerId === data.publicFeeCollectorId;
-                
+                const highlightClass = e.highlight ? 'highlight-anim' : '';
+
                 return `
-                    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${isPublic ? 'border-yellow-500' : 'border-indigo-500'} space-y-2 highlight-anim">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-lg font-bold text-gray-800">${e.title} 
-                                ${e.category ? `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-medium ml-2">${e.category}</span>` : ''}
-                            </h4>
+                    <div id="expense-${e.id}" class="bg-white p-4 rounded-xl shadow-lg border-l-8 border-cyan-400 ${highlightClass}">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="text-lg font-bold text-gray-900 flex-1">${e.title} 
+                                ${e.category ? `<span class="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full text-xs font-medium ml-2">${e.category}</span>` : ''} </h4>
                             <div class="flex items-center space-x-2">
                                 <button onclick="openEditModal('${e.id}')" class="text-gray-500 hover:text-indigo-500 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button onclick="deleteExpense('${e.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
                         </div>
-                        
                         <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                             <div class="text-gray-500">💰 金額:</div>
-                            <div class="font-bold text-right text-gray-800">${e.amount.toFixed(2)} ${e.currency} 
-                                ${e.currency !== data.baseCurrency ? `<span class="text-xs text-gray-400 ml-1">(${baseAmount} ${data.baseCurrency})</span>` : ''}
-                            </div>
-
+                            <div class="font-bold text-right text-gray-800">${e.amount.toFixed(2)} ${e.currency} ${e.currency !== data.baseCurrency ? `<span class="text-xs text-gray-400 ml-1">(${baseAmount} ${data.baseCurrency})</span>` : ''} </div>
                             <div class="text-gray-500">👤 付款人:</div>
-                            <div class="font-bold text-right text-indigo-600">${payer} ${isPublic ? '(公款代墊)' : ''}</div>
-
+                            <div class="font-bold text-right text-indigo-600">${payer} ${isPublic ? '(公款支出)' : ''}</div>
                             <div class="text-gray-500">🧑‍🤝‍🧑 分攤人:</div>
                             <div class="text-right text-gray-700">${targets}</div>
-                            
                             <div class="text-gray-500">📅 日期:</div>
                             <div class="text-right text-gray-700">${e.date}</div>
                         </div>
                     </div>
                 `;
             }).join('');
-            
+
             // Remove highlight pulse after animation
             setTimeout(() => {
                 document.querySelectorAll('.highlight-anim').forEach(el => {
+                    delete e.highlight; // Also remove from data for next save
                     el.classList.remove('highlight-anim');
                 });
+                saveData(true);
             }, 2000);
+        }
+
+        function renderTagsSetting() {
+            const list = document.getElementById('custom-tags-list');
+            if (!list) return;
+
+            list.innerHTML = data.customTags.map(t => `
+                <div class="flex items-center bg-cyan-50 border border-cyan-200 rounded-full px-3 py-1 text-sm font-bold text-cyan-800 shadow-sm">
+                    <span>${t.name}</span>
+                    <button onclick="deleteCustomTag('${t.key}')" class="ml-2 text-cyan-600 hover:text-red-500">
+                        <i class="fa-solid fa-times text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderFavorites() {
+            const list = document.getElementById('favorites-list');
+            if (!list) return;
+
+            list.innerHTML = `
+                <button onclick="openFavoriteModal()" class="text-gray-400 hover:text-indigo-500 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-star mr-1"></i> 編輯常用清單
+                </button>
+            ` + data.favorites.map(f => `
+                <button onclick="applyFavorite('${f.title}', '${f.category}')" class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-bold text-sm shadow-sm hover:bg-indigo-100 hover:text-indigo-700 btn-big">
+                    ${f.category ? f.category + ' ' : ''}${f.title}
+                </button>
+            `).join('');
         }
 
         function renderFavoriteListEditor() {
@@ -973,50 +1061,18 @@
             if (!editor) return;
 
             if (data.favorites.length === 0) {
-                editor.innerHTML = '<div class="text-center text-gray-400 py-4 border-2 border-dashed rounded-xl">尚無常用項目</div>';
+                editor.innerHTML = '<p class="text-center text-gray-500 py-4">尚無常用項目</p>';
                 return;
             }
 
             editor.innerHTML = data.favorites.map(f => `
-                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                    <div class="font-bold text-gray-800">${f.category || '💡'} ${f.title}</div>
-                    <button onclick="deleteFavoriteItem('${f.id}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200 shadow-sm">
+                    <span class="font-bold text-gray-800">${f.category ? f.category + ' ' : ''}${f.title}</span>
+                    <button onclick="deleteFavoriteItem('${f.title}')" class="text-red-500 hover:text-red-700 text-lg">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </div>
             `).join('');
-        }
-        
-        function renderFavorites() {
-            const list = document.getElementById('favorites-list');
-            if (!list) return;
-
-            // Keep the edit button
-            const editButton = list.querySelector('button');
-            list.innerHTML = '';
-            list.appendChild(editButton);
-
-            data.favorites.forEach(f => {
-                const button = document.createElement('button');
-                button.setAttribute('onclick', `useFavorite('${f.id}')`);
-                button.className = 'bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-bold shadow-sm hover:bg-gray-300 btn-big';
-                button.textContent = `${f.category || '💡'} ${f.title}`;
-                list.appendChild(button);
-            });
-        }
-
-        function renderTagList(member) {
-            const list = document.getElementById('member-tags-list');
-            if (!list) return;
-
-            list.innerHTML = data.customTags.map(t => {
-                const isSelected = member.tags.includes(t.key);
-                return `
-                    <button onclick="toggleMemberTag('${member.id}', '${t.key}')" 
-                        class="px-3 py-1 rounded-full text-sm font-bold transition-all ${isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
-                    >
-                        ${isSelected ? '<i class="fa-solid fa-check mr-1"></i>' : ''} ${t.name}
-                    </button>
-                `;
-            }).join('');
         }
 
         // --- Member Logic ---
@@ -1024,38 +1080,43 @@
         function addMember() {
             const nameInput = document.getElementById('input-member-name');
             const name = nameInput.value.trim();
-            if (name === "") {
-                return showToast('請輸入成員名稱', 'warning');
-            }
 
+            if (!name) return showToast('請輸入成員名稱', 'warning');
+            if (data.members.some(m => m.name === name)) return showToast('成員名稱已存在', 'warning');
+
+            const newId = Date.now().toString();
             const newMember = {
-                id: Date.now().toString(),
+                id: newId,
                 name: name,
-                prepaid: 0,
-                prepaidCurrency: data.baseCurrency, // Use base currency as default prepaid currency
+                prepaid: 0.0,
+                prepaidCurrency: data.baseCurrency,
                 isFeeCollected: false,
                 tags: []
             };
 
             data.members.push(newMember);
-            nameInput.value = '';
 
             // 如果是第一個成員，設為公款代墊人
             if (data.members.length === 1) {
-                data.publicFeeCollectorId = newMember.id;
+                data.publicFeeCollectorId = newId;
             }
 
+            nameInput.value = '';
             saveData();
-            showToast(`${name} 加入旅行！`);
+            showToast(`${name} 已加入旅行！`, 'success');
         }
 
         function deleteMember(id) {
-            showModal('confirm', '確認刪除成員', '刪除成員會同時刪除所有與他相關的花費紀錄，確認嗎？', () => {
-                // 移除相關的花費紀錄
-                data.expenses = data.expenses
-                    .filter(e => e.payerId !== id)
-                    .map(e => ({ ...e, targets: e.targets.filter(t => t !== id) }));
-                
+            const member = data.members.find(m => m.id === id);
+            if (!member) return;
+
+            showModal('confirm', '確認刪除成員', `確定要刪除成員 ${member.name} 嗎？所有相關帳務將被清除！`, () => {
+                // 移除所有相關的費用記錄
+                data.expenses = data.expenses.filter(e => e.payerId !== id && !e.targets.includes(id));
+                // 從所有費用中移除作為分攤人
+                data.expenses.forEach(e => {
+                    e.targets = e.targets.filter(tId => tId !== id);
+                });
                 // 移除成員
                 data.members = data.members.filter(m => m.id !== id);
 
@@ -1079,7 +1140,6 @@
         function calculatePublicFeeBalance() {
             const collectorId = data.publicFeeCollectorId;
             const balanceEl = document.getElementById('public-fee-balance');
-            
             if (!collectorId || !balanceEl) return;
 
             // 總公費收入
@@ -1088,86 +1148,41 @@
                 return m.isFeeCollected ? sum + prepaidBase : sum;
             }, 0);
 
-            // 總公費支出 (公款代墊人代付的費用)
+            // 總公費支出 (公款代墊人代付的費用，且標記為公款支出)
             const totalPublicSpend = data.expenses.reduce((sum, e) => {
-                // Check if this expense was paid by the public fee collector and is marked as public
-                // Note: The logic in addExpense relies on payerId being set to publicFeeCollectorId if isPublicFee is checked.
-                if (e.payerId === collectorId && e.payerId === data.publicFeeCollectorId) { 
-                     return sum + (e.amount * e.exchangeRate);
+                // 檢查是否為公款支出 (在 UI 邏輯中，公款支出會將 payerId 設為公款代墊人 ID 且 isPublicFee 為 true)
+                if (e.isPublicFee) {
+                    return sum + (e.amount * e.exchangeRate);
                 }
-                // If it's a "public" expense but paid by someone else (which shouldn't happen with the current UI flow, but for completeness),
-                // we only track the collector's action
                 return sum;
             }, 0);
-            
+
             // 淨餘額 (公費總收入 - 公費總支出)
             const balance = totalPublicPrepaid - totalPublicSpend;
-            
             balanceEl.textContent = balance.toFixed(2);
             balanceEl.className = balance >= 0 ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
         }
 
-        function openMemberTagModal(id) {
-            const member = data.members.find(m => m.id === id);
-            if (!member) return;
-            currentEditingMemberId = id;
-            document.getElementById('member-tag-name').textContent = member.name;
-            renderTagList(member);
-
-            const modal = document.getElementById('member-tag-modal');
-            const panel = document.getElementById('tag-panel');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                panel.classList.remove('modal-hidden-state');
-                panel.classList.add('modal-visible-state');
-            }, 10);
-        }
-
-        function closeMemberTagModal() {
-            const modal = document.getElementById('member-tag-modal');
-            const panel = document.getElementById('tag-panel');
-            panel.classList.remove('modal-visible-state');
-            panel.classList.add('modal-hidden-state');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 250);
-        }
-
-        function toggleMemberTag(memberId, tagKey) {
+        function updatePrepaid(memberId, value) {
+            let amount = parseFloat(value);
             const member = data.members.find(m => m.id === memberId);
             if (!member) return;
 
-            const index = member.tags.indexOf(tagKey);
-            if (index > -1) {
-                member.tags.splice(index, 1);
-            } else {
-                member.tags.push(tagKey);
+            if (isNaN(amount) || amount < 0) {
+                amount = 0.0;
             }
+
+            member.prepaid = parseFloat(amount.toFixed(2));
             saveData();
-            renderTagList(member); // Re-render the tag list in the modal
         }
 
-        function updatePrepaid(id, amountStr) {
-            const member = data.members.find(m => m.id === id);
-            const amount = parseFloat(amountStr);
-            
-            if (member && !isNaN(amount) && amount >= 0) {
-                member.prepaid = amount;
-                saveData();
-                showToast(`${member.name} 預付金額已更新`);
-            } else {
-                showToast('金額不正確', 'warning');
-                renderMembers(); // 恢復舊值
-            }
-        }
+        function toggleFeeCollected(memberId) {
+            const member = data.members.find(m => m.id === memberId);
+            if (!member) return;
 
-        function toggleFeeCollected(id) {
-            const member = data.members.find(m => m.id === id);
-            if (member) {
-                member.isFeeCollected = !member.isFeeCollected;
-                saveData();
-                showToast(`${member.name} 公費狀態已更新`);
-            }
+            member.isFeeCollected = !member.isFeeCollected;
+            saveData();
+            showToast(`${member.name} 公費狀態已更新`);
         }
 
         function batchAddPrepaid() {
@@ -1175,9 +1190,8 @@
             const amount = parseFloat(amountStr);
 
             if (data.members.length === 0) {
-                 return showToast('請先新增成員', 'warning');
+                return showToast('請先新增成員', 'warning');
             }
-
             if (isNaN(amount) || amount <= 0) {
                 return showToast('請輸入有效的公費金額', 'warning');
             }
@@ -1189,10 +1203,8 @@
                     const newPrepaidBase = m.prepaid * currentRate + amount;
                     
                     // 換算回成員的預付幣別
-                    m.prepaid = newPrepaidBase / currentRate; 
+                    m.prepaid = newPrepaidBase / currentRate;
                     m.prepaid = parseFloat(m.prepaid.toFixed(2));
-                    
-                    m.prepaidCurrency = m.prepaidCurrency; // 保持幣別
                     m.isFeeCollected = true;
                 });
                 document.getElementById('batch-prepaid-amount').value = '';
@@ -1204,18 +1216,17 @@
         function addCustomTag() {
             const nameInput = document.getElementById('input-tag-name');
             const name = nameInput.value.trim();
+
             if (!name) return showToast('請輸入標籤名稱', 'warning');
-            
             // 檢查重複
             if (data.customTags.some(t => t.name === name)) {
-                 return showToast('此標籤名稱已存在', 'warning');
+                return showToast('此標籤名稱已存在', 'warning');
             }
 
             const newTag = {
                 key: name.toLowerCase().replace(/[^a-z0-9]/g, '_') + Date.now().toString().slice(-4), // Simple unique key
                 name: name
             };
-
             data.customTags.push(newTag);
             nameInput.value = '';
             saveData();
@@ -1223,7 +1234,7 @@
         }
 
         function deleteCustomTag(key) {
-             showModal('confirm', '確認刪除標籤', '此標籤將從所有成員身上移除，確認刪除嗎？', () => {
+            showModal('confirm', '確認刪除標籤', '此標籤將從所有成員身上移除，確認刪除嗎？', () => {
                 data.customTags = data.customTags.filter(t => t.key !== key);
                 data.members.forEach(m => {
                     m.tags = m.tags.filter(tKey => tKey !== key);
@@ -1233,35 +1244,29 @@
             });
         }
         
-        function renameCustomTag(key) {
-            const tag = data.customTags.find(t => t.key === key);
-            if (!tag) return;
-
-            const newName = prompt(`重新命名標籤 "${tag.name}" 為：`);
-            if (newName && newName.trim() !== '' && newName.trim() !== tag.name) {
-                // 檢查重複
-                if (data.customTags.some(t => t.name === newName.trim())) {
-                    return showToast('此標籤名稱已存在', 'warning');
-                }
-                tag.name = newName.trim();
-                saveData();
-                showToast('標籤已重新命名');
-            }
-        }
-
-
         // --- Expense Logic ---
-        
+
         function toggleExpenseType(isPublic) {
-            const payerSelectContainer = document.getElementById('individual-payer-select-container');
-            const publicFeeNote = document.getElementById('public-fee-note');
-            
+            const payerContainer = document.getElementById('individual-payer-select-container');
+            const publicNote = document.getElementById('public-fee-note');
+            const payerSelect = document.getElementById('exp-payer');
+            const collectorId = data.publicFeeCollectorId;
+
             if (isPublic) {
-                payerSelectContainer.classList.add('hidden');
-                publicFeeNote.classList.remove('hidden');
+                if (!collectorId) {
+                    showToast('請先指定一位公款代墊人', 'warning');
+                    document.getElementById('is-public-fee').checked = false;
+                    return;
+                }
+                payerContainer.classList.add('hidden');
+                publicNote.classList.remove('hidden');
             } else {
-                payerSelectContainer.classList.remove('hidden');
-                publicFeeNote.classList.add('hidden');
+                payerContainer.classList.remove('hidden');
+                publicNote.classList.add('hidden');
+                // 切回個人支出時，預設選擇公款代墊人，因為他最常付款
+                if (collectorId) {
+                    payerSelect.value = collectorId;
+                }
             }
         }
 
@@ -1277,24 +1282,27 @@
             const title = document.getElementById('exp-title').value.trim();
             const amountStr = document.getElementById('exp-amount').value;
             const currency = document.getElementById('exp-currency').value;
-            const payerSelect = document.getElementById('exp-payer');
-            const isPublicFee = document.getElementById('is-public-fee').checked;
             const category = document.getElementById('exp-category').value;
+            const isPublicFee = document.getElementById('is-public-fee').checked;
             
-            const payerId = isPublicFee ? data.publicFeeCollectorId : payerSelect.value;
-            
-            const targets = Array.from(document.querySelectorAll('#targets-list input:checked'))
-                .map(input => input.value);
+            let payerId = '';
+            if (isPublicFee) {
+                payerId = data.publicFeeCollectorId;
+            } else {
+                payerId = document.getElementById('exp-payer').value;
+            }
+
+            const targetCheckboxes = document.querySelectorAll('#targets-list input[type="checkbox"]:checked');
+            const targets = Array.from(targetCheckboxes).map(cb => cb.value);
+
             const amount = parseFloat(amountStr);
+            
+            if (!title) return showToast('請輸入消費名稱', 'warning');
+            if (isNaN(amount) || amount <= 0) return showToast('請輸入有效的金額', 'warning');
+            if (!payerId) return showToast('請選擇付款人', 'warning');
+            if (targets.length === 0) return showToast('請選擇分攤人', 'warning');
 
-            if (!title || isNaN(amount) || amount <= 0 || !payerId || targets.length === 0) {
-                return showToast('請填寫完整：標題、金額、付款人、分攤人', 'warning');
-            }
-            if (data.members.length === 0) {
-                return showToast('請先新增成員', 'warning');
-            }
-
-            // exchangeRate: Rate from expense currency to data.baseCurrency
+            // 1. Get exchange rate from expense currency to data.baseCurrency
             const exchangeRate = getRateToBase(currency);
 
             const newExpense = {
@@ -1306,22 +1314,28 @@
                 payerId: payerId,
                 targets: targets,
                 category: category,
-                date: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+                isPublicFee: isPublicFee, // Add this field for clarity
+                date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+                highlight: true // For animation
             };
 
             data.expenses.unshift(newExpense);
-
+            
+            // Clear inputs and reset targets
             document.getElementById('exp-title').value = '';
             document.getElementById('exp-amount').value = '';
             document.getElementById('exp-category').value = '';
-            
+            document.getElementById('is-public-fee').checked = false;
+            toggleExpenseType(false); // Reset UI to individual payer
+            document.getElementById('exp-payer').value = payerId; // Keep the last payer selected
+
             // Re-select all targets for next expense
             document.querySelectorAll('#targets-list input[type="checkbox"]').forEach(cb => {
                 cb.checked = true;
             });
 
             saveData();
-            showToast(`記帳成功！ ${title} ${amount} ${currency}`);
+            showToast(`記帳成功！ ${title} ${amount} ${currency}`, 'success');
         }
 
         function deleteExpense(id) {
@@ -1339,13 +1353,13 @@
 
             document.getElementById('edit-title').value = expense.title;
             document.getElementById('edit-amount').value = expense.amount;
-            
+
             // Populate currency select options and set value
             const editCurrencySelect = document.getElementById('edit-currency');
             editCurrencySelect.innerHTML = ALL_CURRENCIES.map(c => 
                 `<option value="${c}" ${c === expense.currency ? 'selected' : ''}>${c}</option>`
             ).join('');
-            
+
             document.getElementById('edit-date').value = expense.date;
             document.getElementById('edit-category').value = expense.category || '';
 
@@ -1371,6 +1385,7 @@
 
         function saveEdit() {
             if (!currentEditingId) return;
+
             const expense = data.expenses.find(e => e.id === currentEditingId);
             if (!expense) return;
 
@@ -1379,68 +1394,29 @@
             const newCurrency = document.getElementById('edit-currency').value;
             const newDate = document.getElementById('edit-date').value;
             const newCategory = document.getElementById('edit-category').value;
+
             const newAmount = parseFloat(newAmountStr);
 
             if (!newTitle || isNaN(newAmount) || newAmount <= 0) {
-                return showToast('請檢查標題和金額是否有效', 'warning');
+                return showToast('請確保名稱和有效金額已填寫', 'warning');
             }
 
             // Update expense data
             expense.title = newTitle;
-            expense.amount = newAmount;
+            expense.amount = parseFloat(newAmount.toFixed(2));
             expense.currency = newCurrency;
             expense.date = newDate;
             expense.category = newCategory;
-            
-            // Recalculate exchange rate if currency changed
-            if (expense.currency !== newCurrency) {
-                expense.exchangeRate = getRateToBase(newCurrency);
-            }
-            
+            // Recalculate exchange rate just in case base currency or rates changed since original entry
+            expense.exchangeRate = getRateToBase(newCurrency);
+            expense.highlight = true; // For animation
+
             saveData();
             closeEditModal();
-            showToast('消費已更新', 'success');
+            showToast('消費修改已儲存', 'success');
         }
 
         // --- Favorite Logic ---
-
-        function addFavoriteItem() {
-            const title = document.getElementById('new-favorite-title').value.trim();
-            const category = document.getElementById('new-favorite-category').value.trim();
-
-            if (!title) return showToast('請輸入名稱', 'warning');
-
-            data.favorites.push({
-                id: Date.now().toString(),
-                title: title,
-                category: category || '💡'
-            });
-
-            document.getElementById('new-favorite-title').value = '';
-            document.getElementById('new-favorite-category').value = '';
-            saveData();
-            renderFavoriteListEditor();
-            showToast('常用項目已新增');
-        }
-
-        function deleteFavoriteItem(id) {
-            data.favorites = data.favorites.filter(f => f.id !== id);
-            saveData();
-            renderFavoriteListEditor();
-            showToast('常用項目已刪除', 'error');
-        }
-
-        function useFavorite(id) {
-            const favorite = data.favorites.find(f => f.id === id);
-            if (!favorite) return;
-
-            document.getElementById('exp-title').value = favorite.title;
-            document.getElementById('exp-category').value = favorite.category;
-            
-            switchTab('expenses'); // 切換到記帳頁
-            showToast(`已套用 ${favorite.title}`);
-        }
-
         function openFavoriteModal() {
             const modal = document.getElementById('favorite-modal');
             const panel = document.getElementById('favorite-panel');
@@ -1463,8 +1439,44 @@
             }, 250);
         }
 
-        // --- Settlement Logic ---
+        function addFavoriteItem() {
+            const titleInput = document.getElementById('new-favorite-title');
+            const categoryInput = document.getElementById('new-favorite-category');
+            const title = titleInput.value.trim();
+            const category = categoryInput.value.trim();
 
+            if (!title) return showToast('請輸入常用名稱', 'warning');
+            if (data.favorites.some(f => f.title === title)) return showToast('常用項目已存在', 'warning');
+
+            data.favorites.push({ title: title, category: category });
+            titleInput.value = '';
+            categoryInput.value = '';
+            saveData();
+            renderFavoriteListEditor();
+            showToast('常用項目已新增');
+        }
+
+        function deleteFavoriteItem(title) {
+            data.favorites = data.favorites.filter(f => f.title !== title);
+            saveData();
+            renderFavoriteListEditor();
+            showToast('常用項目已刪除', 'error');
+        }
+
+        function applyFavorite(title, category) {
+            document.getElementById('exp-title').value = title;
+            // 嘗試匹配預設類別
+            const categorySelect = document.getElementById('exp-category');
+            const matchingOption = Array.from(categorySelect.options).find(opt => opt.text.includes(category));
+            if (matchingOption) {
+                categorySelect.value = matchingOption.value;
+            } else {
+                categorySelect.value = '';
+            }
+            showToast(`已套用常用項目: ${title}`);
+        }
+
+        // --- Settlement Logic ---
         function calculateSettlement(forceRecalculate = false) {
             const loading = document.getElementById('plan-loading');
             if (loading) loading.style.display = 'block';
@@ -1477,14 +1489,13 @@
 
             const balances = {};
             const baseCur = data.baseCurrency;
-
             data.members.forEach(m => {
-                balances[m.id] = { 
+                balances[m.id] = {
                     id: m.id, // 新增 id 欄位以供轉帳計畫使用
-                    name: m.name, 
-                    prepaid: 0, 
-                    spend: 0, 
-                    balance: 0 
+                    name: m.name,
+                    prepaid: 0,
+                    spend: 0,
+                    balance: 0
                 };
             });
 
@@ -1499,12 +1510,12 @@
                 }
                 totalPrepaid += prepaidBase;
             });
-            
+
             // 2. 計算花費分攤 (Spend)
             data.expenses.forEach(e => {
                 const amountBase = e.amount * e.exchangeRate;
                 totalSpend += amountBase;
-
+                
                 const targetsCount = e.targets.length;
                 if (targetsCount > 0) {
                     const share = amountBase / targetsCount;
@@ -1516,61 +1527,63 @@
                 }
             });
 
-            // 3. 計算餘額 (Balance = Prepaid - Spend)
+            // 3. 計算淨餘額
             const memberBalances = Object.values(balances).map(b => {
-                b.balance = b.prepaid - b.spend;
-                b.prepaid = parseFloat(b.prepaid.toFixed(2));
-                b.spend = parseFloat(b.spend.toFixed(2));
-                b.balance = parseFloat(b.balance.toFixed(2));
+                // 淨餘額 = 預付金 - 平均花費
+                b.balance = parseFloat((b.prepaid - b.spend).toFixed(2));
                 return b;
             });
-            
-            totalSpend = parseFloat(totalSpend.toFixed(2));
-            totalPrepaid = parseFloat(totalPrepaid.toFixed(2));
 
-            // 4. 產生結算計畫 (Settlement Plan)
-            const plan = simplifySettlement(memberBalances);
+            // 4. 計算轉帳計畫
+            const plan = simplifySettlement(memberBalances.filter(b => b.balance !== 0));
 
             settlementResult = {
-                memberBalances: memberBalances,
                 totalSpend: totalSpend.toFixed(2),
                 totalPrepaid: totalPrepaid.toFixed(2),
+                memberBalances: memberBalances,
                 plan: plan
             };
-            
+
             renderResult(settlementResult);
             if (loading) loading.style.display = 'none';
         }
 
+
+        // 5. 結算簡化演算法
         function simplifySettlement(balances) {
-            // 篩選出應收和應付的成員
-            let givers = balances.filter(b => b.balance < -0.01).sort((a, b) => a.balance - b.balance); // 負數 (應付)
-            let receivers = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance); // 正數 (應收)
+            const payers = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance); // 應收 > 0
+            const receivers = balances.filter(b => b.balance < -0.01).sort((a, b) => a.balance - b.balance); // 應付 < 0
 
             const plan = [];
 
-            while (givers.length > 0 && receivers.length > 0) {
-                let giver = givers[0];
-                let receiver = receivers[0];
+            let pIndex = 0;
+            let rIndex = 0;
 
-                // 取絕對值，因為 giver.balance 是負數
-                const amountToTransfer = Math.min(Math.abs(giver.balance), receiver.balance);
+            // 應付金額取絕對值
+            receivers.forEach(r => r.balance = Math.abs(r.balance));
+            
+            while (pIndex < payers.length && rIndex < receivers.length) {
+                let payer = payers[pIndex];
+                let receiver = receivers[rIndex];
+                
+                // 應付金額 (Receiver's absolute balance)
+                const amount = Math.min(payer.balance, receiver.balance);
 
-                if (amountToTransfer > 0.01) {
-                    plan.push({
-                        from: giver.id,
-                        to: receiver.id,
-                        amount: amountToTransfer.toFixed(2)
-                    });
+                plan.push({
+                    from: receiver.id,
+                    to: payer.id,
+                    amount: amount.toFixed(2)
+                });
+
+                payer.balance -= amount;
+                receiver.balance -= amount;
+
+                if (payer.balance < 0.01) {
+                    pIndex++;
                 }
-
-                // 更新餘額
-                giver.balance += amountToTransfer;
-                receiver.balance -= amountToTransfer;
-
-                // 重新排序並移除已結清的成員
-                givers = givers.filter(b => Math.abs(b.balance) >= 0.01);
-                receivers = receivers.filter(b => Math.abs(b.balance) >= 0.01);
+                if (receiver.balance < 0.01) {
+                    rIndex++;
+                }
             }
 
             return plan;
@@ -1587,6 +1600,7 @@
 
             document.getElementById('total-spend').textContent = result.totalSpend;
             document.getElementById('total-prepaid').textContent = result.totalPrepaid;
+
             const baseCur = data.baseCurrency;
 
             // 渲染成員結算列表
@@ -1602,74 +1616,62 @@
                             <h4 class="text-xl font-bold text-gray-800">${b.name}</h4>
                             <span class="px-3 py-1 rounded-full font-bold ${statusClass}">${statusText} ${sign}${Math.abs(b.balance).toFixed(2)} ${baseCur}</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-y-1 text-sm mt-3 border-t pt-2">
-                            <div class="text-gray-500">總預付:</div>
-                            <div class="font-medium text-right text-green-600">${b.prepaid.toFixed(2)} ${baseCur}</div>
-                            <div class="text-gray-500">總花費分攤:</div>
-                            <div class="font-medium text-right text-red-600">${b.spend.toFixed(2)} ${baseCur}</div>
+                        <div class="grid grid-cols-3 text-sm mt-2 text-gray-600 border-t border-gray-100 pt-2">
+                            <p class="text-left">總預付:</p><p class="text-center">${b.prepaid.toFixed(2)}</p>
+                            <p class="text-right">總花費:</p><p class="text-left">${b.spend.toFixed(2)}</p>
+                            <p class="text-center text-gray-400">(${baseCur})</p>
                         </div>
                     </div>
                 `;
             }).join('');
 
             // 渲染轉帳計畫
-            renderSettlementPlan(result.plan, baseCur);
-        }
-
-        function renderSettlementPlan(plan, baseCur) {
             const planList = document.getElementById('settlement-plan');
-            if (!planList) return;
-
-            planList.innerHTML = ''; // Clear loading
-
-            if (plan.length === 0) {
-                planList.innerHTML = `
-                    <div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">
-                        🎉 帳目全部結清囉！
-                    </div>
-                `;
-                return;
+            if (result.plan.length === 0) {
+                planList.innerHTML = '<div class="text-center text-gray-500 py-4">帳務已結清，無須轉帳。</div>';
+            } else {
+                planList.innerHTML = result.plan.map(p => {
+                    const f = data.members.find(m => m.id === p.from)?.name;
+                    const t = data.members.find(m => m.id === p.to)?.name;
+                    return `
+                        <div class="bg-indigo-50 p-3 rounded-xl shadow-md border-l-4 border-indigo-400 flex justify-between items-center">
+                            <span class="text-lg font-bold text-gray-800 flex-1">
+                                💸 ${f} <i class="fa-solid fa-arrow-right mx-2 text-indigo-500"></i> ${t}
+                            </span>
+                            <span class="text-xl font-bold text-indigo-600">${p.amount} ${baseCur}</span>
+                        </div>
+                    `;
+                }).join('');
             }
-
-            planList.innerHTML = plan.map(p => {
-                const f = data.members.find(m => m.id === p.from)?.name || '未知';
-                const t = data.members.find(m => m.id === p.to)?.name || '未知';
-                
-                return `
-                    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-indigo-400 flex justify-between items-center">
-                        <div class="text-sm font-medium text-gray-700">
-                            👉 <span class="font-bold text-indigo-600">${f}</span> 給 <span class="font-bold text-indigo-600">${t}</span>
-                        </div>
-                        <div class="text-xl font-bold text-gray-800">
-                            ${p.amount} ${baseCur}
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
 
         function copyReport() {
-            if (!settlementResult) return showToast('請先計算結算結果', 'warning');
-            
+            if (!settlementResult) {
+                calculateSettlement(true);
+                return showToast('正在計算結果，請稍候再試', 'info');
+            }
+            if (!navigator.clipboard) {
+                showToast('您的瀏覽器不支援剪貼簿功能', 'error');
+                return;
+            }
+
             const baseCur = data.baseCurrency;
-            let text = `【旅行記帳本結算報告】\n結算幣別: ${baseCur}\n\n`;
-
-            // 總覽
+            let text = `【旅行記帳本 - 結算報告】\n`;
+            text += `結算幣別: ${baseCur}\n`;
             text += `總花費: ${settlementResult.totalSpend} ${baseCur}\n`;
-            text += `總預付/公費: ${settlementResult.totalPrepaid} ${baseCur}\n\n`;
+            text += `總預付: ${settlementResult.totalPrepaid} ${baseCur}\n\n`;
 
-            // 個人結算
-            text += `--- 個人結算 ---\n`;
+            text += `--- 成員淨餘額 ---\n`;
             settlementResult.memberBalances.forEach(b => {
-                const status = b.balance > 0.01 ? '應收' : b.balance < -0.01 ? '應付' : '結清';
+                const statusText = b.balance > 0.01 ? '應收' : b.balance < -0.01 ? '應付' : '結清';
                 const sign = b.balance > 0.01 ? '+' : '';
-                text += `👤 ${b.name}: ${status} ${sign}${b.balance.toFixed(2)} ${baseCur}\n`;
+                text += `👤 ${b.name}: ${statusText} ${sign}${Math.abs(b.balance).toFixed(2)} ${baseCur}\n`;
             });
+            text += `\n`;
 
-            // 轉帳計畫
-            text += `\n--- 轉帳計畫 ---\n`;
+            text += `--- 轉帳結算計畫 ---\n`;
             if (settlementResult.plan.length === 0) {
-                text += `🎉 帳目全部結清囉！`;
+                text += `✅ 帳務已結清，無須轉帳。\n`;
             } else {
                 settlementResult.plan.forEach(p => {
                     const f = data.members.find(m => m.id === p.from)?.name;
@@ -1693,7 +1695,7 @@
         }
 
         // --- Exchange Rate Logic ---
-        
+
         function updateCalculator(isTargetInput = false) {
             const amountFromEl = document.getElementById('calc-amount');
             const amountToEl = document.getElementById('calc-amount-to');
@@ -1701,10 +1703,10 @@
             const toCur = document.getElementById('calc-to').value;
             const resultAmountEl = document.getElementById('calc-result-amount');
             const resultCurEl = document.getElementById('calc-result-cur');
-            
+
             const amountFrom = parseFloat(amountFromEl.value);
             const amountTo = parseFloat(amountToEl.value);
-            
+
             resultCurEl.textContent = toCur;
 
             if (fromCur === toCur) {
@@ -1745,48 +1747,33 @@
             }
         }
 
-        function getRate(fromCur, toCur) {
-            // Rate: 1 [fromCur] = ? [toCur]
-            // Calculate via TWD (which is the actual stored base rate for the API fetch)
-            const rateFromToTWD = data.exchangeRates[fromCur] || DEFAULT_EXCHANGE_RATES[fromCur] || 1.0;
-            const rateToToTWD = data.exchangeRates[toCur] || DEFAULT_EXCHANGE_RATES[toCur] || 1.0;
-            
-            // Formula: (1 [fromCur] = rateFromToTWD TWD) / (1 [toCur] = rateToToTWD TWD)
-            return rateFromToTWD / rateToToTWD;
-        }
+        function switchBaseCurrency(newBase) {
+            if (data.baseCurrency === newBase) return;
 
-        function updateRatesFromLive() {
-            if (!liveRates) return;
-            
-            // liveRates is 1 TWD = ? Other Currencies
-            // We need 1 Other Currencies = ? TWD
-            
-            for (const cur in liveRates) {
-                const rate = liveRates[cur];
-                if (rate > 0) {
-                    // Stored rate is 1 [cur] = ? TWD
-                    data.exchangeRates[cur] = parseFloat((1 / rate).toFixed(4));
-                }
-            }
-            
-            const badge = document.getElementById('rate-source-badge');
-            const info = document.getElementById('calc-rate-info');
-            
-            if(badge) { 
-                badge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold";
-                badge.innerText = "🟢 網路即時";
-            }
-            if(info) {
-                info.innerText = "網路即時匯率已更新並儲存";
-            }
-            
-            showToast('已成功更新網路即時匯率');
-            saveData(); 
+            showModal('confirm', '確認切換基準幣別', `切換基準幣別會影響所有儲存的「匯率」和「公費」計算，確定要將基準幣別切換為 ${newBase} 嗎？`, () => {
+                data.baseCurrency = newBase;
+                
+                // 重新計算所有費用的 exchangeRate (1 ExpenseCur = ? BaseCur)
+                data.expenses.forEach(e => {
+                    e.exchangeRate = getRateToBase(e.currency);
+                });
+
+                // 重新計算所有成員的 prepaid (保持基準幣別的價值不變，換算回成員的幣別)
+                data.members.forEach(m => {
+                    const prepaidBase = m.prepaid * getRateToBase(m.prepaidCurrency);
+                    m.prepaidCurrency = newBase; // 將成員的預付幣別也切換
+                    m.prepaid = prepaidBase / getRateToBase(newBase); // new rate is 1.0, so it's just prepaidBase
+                    m.prepaid = parseFloat(m.prepaid.toFixed(2));
+                });
+                
+                saveData();
+                showToast(`基準幣別已切換為 ${newBase}`, 'success');
+            }, '切換');
         }
 
         function fetchLiveRates() {
-            const badge = document.getElementById('rate-source-badge'), info = document.getElementById('calc-rate-info');
-            
+            const badge = document.getElementById('rate-source-badge');
+            const info = document.getElementById('calc-rate-info');
             if(badge) { 
                 badge.className = "text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold"; 
                 badge.innerText = "更新中..."; 
@@ -1821,6 +1808,35 @@
                 });
         }
 
+        function updateRatesFromLive() {
+            const badge = document.getElementById('rate-source-badge');
+            const info = document.getElementById('calc-rate-info');
+            const newExchangeRates = JSON.parse(JSON.stringify(data.exchangeRates));
+
+            if (!liveRates) return;
+
+            // 1 TWD = X Other Currencies (from API)
+            // We need 1 Other Currency = X TWD (for our internal storage)
+            ALL_CURRENCIES.forEach(c => {
+                if (c === 'TWD') {
+                    newExchangeRates['TWD'] = 1.0;
+                    return;
+                }
+                const rateToTWD = liveRates[c] ? (1 / liveRates[c]) : DEFAULT_EXCHANGE_RATES[c];
+                newExchangeRates[c] = parseFloat(rateToTWD.toFixed(4));
+            });
+
+            data.exchangeRates = newExchangeRates;
+            saveData(); // Save and re-render lists
+
+            if(badge) { 
+                badge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold"; 
+                badge.innerText = "✓ 網路更新"; 
+            }
+            if(info) info.innerText = `最後更新時間：${new Date().toLocaleTimeString()} (基準幣別：${data.baseCurrency})`;
+            showToast('匯率已更新！', 'success');
+        }
+
         function updateRate(currency, value) {
             let rateInput = parseFloat(value);
             if (isNaN(rateInput) || rateInput <= 0) {
@@ -1831,88 +1847,75 @@
 
             // rateInput: 1 Other = ? Base
             const baseToTwdRate = data.exchangeRates[data.baseCurrency] || 1.0;
-            
+
             // newTwdRate: 1 Other = ? TWD
-            const newTwdRate = rateInput * baseToTwdRate; 
-            
+            const newTwdRate = rateInput * baseToTwdRate;
             data.exchangeRates[currency] = parseFloat(newTwdRate.toFixed(4));
-            
+
             saveData();
-            showToast(`已設定 ${currency} 對 ${data.baseCurrency} 的匯率為 ${rateInput.toFixed(4)}`);
+            showToast(`已更新 ${currency} 匯率`);
         }
-
-        function switchBaseCurrency(currency) {
-            if (data.baseCurrency === currency) return;
-            
-            data.baseCurrency = currency;
-            
-            // 重新計算所有 expenses 的 exchangeRate
-            data.expenses.forEach(e => {
-                e.exchangeRate = getRateToBase(e.currency);
-            });
-            
-            // 重新計算所有 member 的 prepaid (保持金額，但更新幣別)
-            data.members.forEach(m => {
-                 m.prepaidCurrency = currency;
-            });
-
-            settlementResult = null; // 清除舊的結算結果
-            
-            saveData();
-            showToast(`結算基準幣別已切換為 ${currency}`, 'success');
-        }
-
-        // --- Backup & Restore ---
+        
+        // --- Backup and Restore ---
 
         function exportData(type) {
-            let fileContent;
-            let mimeType;
-            let fileName;
+            let fileContent = '';
+            let mimeType = '';
+            let fileName = '';
 
             if (type === 'json') {
                 fileContent = JSON.stringify(data, null, 2);
                 mimeType = 'application/json';
                 fileName = `travel_bookkeeping_backup_${new Date().toISOString().split('T')[0]}.json`;
             } else if (type === 'text') {
-                if (!settlementResult) {
-                    calculateSettlement(true); // Force calculation
-                }
-                if (!settlementResult) {
-                     return showToast('結算資料不足，無法匯出文字檔', 'error');
-                }
-                
+                // Generate simple text report (similar to copyReport but without clipboard logic)
+                calculateSettlement(true);
+                const result = settlementResult;
+                if (!result) return showToast('請先計算結算結果', 'warning');
+
                 const baseCur = data.baseCurrency;
-                let text = `【旅行記帳本結算報告】\n版本: V8.9a\n匯出日期: ${new Date().toLocaleDateString('zh-TW')}\n結算幣別: ${baseCur}\n\n`;
+                let text = `【旅行記帳本 - 完整紀錄】\n`;
+                text += `\n== 結算資訊 ==\n`;
+                text += `結算幣別: ${baseCur}\n`;
+                text += `總花費: ${result.totalSpend} ${baseCur}\n`;
+                text += `總預付: ${result.totalPrepaid} ${baseCur}\n\n`;
 
-                // 總覽
-                text += `--- 總覽 ---\n`;
-                text += `總花費: ${settlementResult.totalSpend} ${baseCur}\n`;
-                text += `總預付/公費: ${settlementResult.totalPrepaid} ${baseCur}\n\n`;
-
-                // 個人結算
-                text += `--- 個人結算 ---\n`;
-                settlementResult.memberBalances.forEach(b => {
-                    const status = b.balance > 0.01 ? '應收' : b.balance < -0.01 ? '應付' : '結清';
+                text += `== 成員淨餘額 ==\n`;
+                result.memberBalances.forEach(b => {
+                    const statusText = b.balance > 0.01 ? '應收' : b.balance < -0.01 ? '應付' : '結清';
                     const sign = b.balance > 0.01 ? '+' : '';
-                    text += `👤 ${b.name}: ${status} ${sign}${b.balance.toFixed(2)} ${baseCur}\n`;
-                    text += `  └ 預付/公費: ${b.prepaid.toFixed(2)} ${baseCur} | 分攤花費: ${b.spend.toFixed(2)} ${baseCur}\n`;
+                    text += `👤 ${b.name}: ${statusText} ${sign}${Math.abs(b.balance).toFixed(2)} ${baseCur} (預付: ${b.prepaid.toFixed(2)}, 花費: ${b.spend.toFixed(2)})\n`;
                 });
+                text += `\n`;
 
-                // 轉帳計畫
-                text += `\n--- 轉帳計畫 ---\n`;
-                if (settlementResult.plan.length === 0) {
-                    text += `🎉 帳目全部結清囉！`;
+                text += `== 轉帳結算計畫 ==\n`;
+                if (result.plan.length === 0) {
+                    text += `✅ 帳務已結清，無須轉帳。\n`;
                 } else {
-                    settlementResult.plan.forEach(p => {
+                    result.plan.forEach(p => {
                         const f = data.members.find(m => m.id === p.from)?.name;
                         const t = data.members.find(m => m.id === p.to)?.name;
                         text += `👉 ${f} 給 ${t}：${p.amount} ${baseCur}\n`;
                     });
                 }
-
+                text += `\n`;
+                
+                text += `== 費用明細 ==\n`;
+                data.expenses.forEach(e => {
+                    const payer = data.members.find(m => m.id === e.payerId)?.name || '未知';
+                    const targets = e.targets.map(tId => data.members.find(m => m.id === tId)?.name || '未知').join(', ');
+                    const baseAmount = (e.amount * e.exchangeRate).toFixed(2);
+                    text += `[${e.date}] ${e.title} (${e.category || '無類別'}) - ${e.amount.toFixed(2)} ${e.currency} (${baseAmount} ${baseCur})\n`;
+                    text += `   - 付款人: ${payer} ${e.isPublicFee ? '(公款支出)' : ''}\n`;
+                    text += `   - 分攤人: ${targets}\n`;
+                });
+                
                 fileContent = text;
                 mimeType = 'text/plain';
                 fileName = `travel_bookkeeping_report_${new Date().toISOString().split('T')[0]}.txt`;
+            } else if (type === 'csv') {
+                copyExpensesAsCsv(true); // Internal call to get CSV content
+                return;
             } else {
                 return; // Should not happen
             }
@@ -1934,66 +1937,44 @@
                 return;
             }
             if (data.expenses.length === 0) {
-                showToast('沒有記帳資料可供複製', 'warning');
+                showToast('沒有記帳紀錄可複製', 'warning');
                 return;
             }
 
-            // 輔助函式：處理 CSV 內容的跳脫字元
-            const escapeCsv = (value) => {
-                let str = String(value || '');
-                // 處理可能包含逗號、換行或引號的值，將其用雙引號包裹，並將內部的雙引號替換為兩個雙引號
-                if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-                    return `"${str.replace(/"/g, '""')}"`;
-                }
-                return str;
-            };
+            const headers = ["日期", "名稱", "類別", "金額", "幣別", "折算(基準幣別)", "付款人", "分攤人"];
+            const csvRows = [headers.join(',')];
+
+            data.expenses.forEach(e => {
+                const payer = data.members.find(m => m.id === e.payerId)?.name || '未知';
+                const targets = e.targets.map(tId => data.members.find(m => m.id === tId)?.name || '未知').join(';');
+                const baseAmount = (e.amount * e.exchangeRate).toFixed(2);
+
+                const row = [
+                    `"${e.date}"`,
+                    `"${e.title}"`,
+                    `"${e.category || ''}"`,
+                    e.amount.toFixed(2),
+                    e.currency,
+                    baseAmount,
+                    `"${payer}"`,
+                    `"${targets}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            const csvString = csvRows.join('\n');
             
-            // 定義 CSV 標頭
-            const header = [
-                '日期', '名稱', '類別', '金額', '幣別', '匯率', '基準幣金額', '付款人', '分攤成員', '公費代墊'
-            ];
-
-            // 格式化資料行 (最新的記帳在最前面)
-            const csvRows = data.expenses.map(exp => { 
-                const payerName = data.members.find(m => m.id === exp.payerId)?.name || '未知';
-                const rate = parseFloat(exp.exchangeRate) || 1.0; 
-                const baseAmount = (exp.amount * rate).toFixed(2); // 基準幣金額保留兩位小數
-                
-                // 獲取分攤成員名稱並用 '/' 分隔
-                const memberNames = exp.targets.map(memberId => 
-                    data.members.find(m => m.id === memberId)?.name || memberId
-                ).join('/');
-
-                // 判斷是否為公費 (付款人為公款代墊人)
-                const isPublicFee = exp.payerId === data.publicFeeCollectorId ? '是' : ''; 
-                
-                return [
-                    escapeCsv(exp.date), // 日期 (YYYY-MM-DD)
-                    escapeCsv(exp.title), // 名稱
-                    escapeCsv(exp.category || ''), // 類別
-                    escapeCsv(exp.amount), // 金額
-                    escapeCsv(exp.currency), // 幣別
-                    escapeCsv(rate), // 匯率
-                    escapeCsv(baseAmount), // 基準幣金額
-                    escapeCsv(payerName), // 付款人
-                    escapeCsv(memberNames), // 分攤成員
-                    escapeCsv(isPublicFee) // 公費代墊
-                ].join(',');
-            });
-
-            // 結合標頭和資料行
-            const csvContent = [
-                header.join(','),
-                ...csvRows
-            ].join('\n');
-
-            // 複製到剪貼簿
-            navigator.clipboard.writeText(csvContent).then(() => {
-                showToast('已成功複製記帳資料 (CSV)', 'success');
-            }).catch(err => {
-                console.error('Copy failed:', err);
-                showToast('複製失敗: ' + (err.message || '無法訪問剪貼簿'), 'error');
-            });
+            const ta = document.createElement('textarea');
+            ta.value = csvString;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('記帳明細 (CSV 格式) 已複製！', 'success');
+            } catch(e) {
+                alert('複製失敗');
+            }
+            document.body.removeChild(ta);
         }
 
         function importData(event) { 
@@ -2033,7 +2014,7 @@
         }
 
         function confirmClearData() {
-            showModal('confirm', '警告：永久刪除', '您確定要清除所有資料嗎？此操作不可逆！', clearData);
+            showModal('confirm', '警告：永久刪除', '您確定要清除所有資料嗎？此操作無法復原。', clearData, '確認清除');
         }
     </script>
 </body>
