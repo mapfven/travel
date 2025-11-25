@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅行記帳本 V8.9b (手機優化版)</title>
+    <title>旅行記帳本 V8.9a (資料儲存修正版)</title>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -14,1146 +14,1807 @@
         
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
-            background-color: #FFFBEB; /* 淺黃色背景 */
+            background-color: #FFFBEB; 
             -webkit-tap-highlight-color: transparent; 
-            font-size: 16px;
+            font-size: 1rem; 
+            padding-top: 100px; 
+            padding-bottom: 40px; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: padding-bottom 0.3s;
         }
-        .container {
-            max-width: 800px; /* 限制寬度 */
+
+        /* 隱藏捲軸但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 按鈕點擊效果 */
+        .btn-big { transition: transform 0.1s; }
+        .btn-big:active { transform: scale(0.98); }
+
+        /* 導航欄樣式 - 行動點擊與顯示優化 */
+        .nav-item {
+            cursor: pointer; 
+            touch-action: manipulation; 
+            transition: color 0.2s, transform 0.1s;
         }
-        /* 隱藏預設滾動條，使用更優雅的樣式 */
-        .custom-scroll::-webkit-scrollbar {
-            display: none;
-        }
-        .custom-scroll {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
+        .nav-item.active { color: #4F46E5; font-weight: bold; }
+        .nav-item.inactive { color: #9CA3AF; }
+        .nav-item:active { transform: scale(0.95); } 
         
-        /* 避免 Tailwind CSS 影響 select 的箭頭 */
-        select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
+        /* 避免 iOS 輸入框放大 */
+        input, select, textarea {
+            font-size: 1rem !important; 
         }
 
-        /* Tabs 樣式 */
-        .tab-button {
-            transition: all 0.3s ease;
-        }
-        .tab-button.active {
-            border-color: #D97706; /* amber-600 */
-            background-color: #FEF3C7; /* amber-100 */
-            color: #D97706;
-            font-weight: 700;
+        /* 頂部導航欄動畫 */
+        #top-nav { 
+            transition: transform 0.3s ease-in-out;
+            will-change: transform;
+            padding-top: env(safe-area-inset-top); 
         }
 
-        /* Toast Message */
-        #toast-container {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50; /* Higher than modal */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        /* Modal 動畫 */
+        .modal-base {
+            transition: opacity 0.2s ease-out, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .toast {
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-top: 10px;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none;
+        .modal-hidden-state { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .modal-visible-state { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+        /* 高亮動畫 */
+        @keyframes highlight-pulse {
+            0% { background-color: #dcfce7; }
+            100% { background-color: white; }
         }
-        .toast.show {
-            opacity: 1;
-        }
+        .highlight-anim { animation: highlight-pulse 2s ease-out; }
     </style>
 </head>
 
-<body class="p-0 sm:p-4 pb-20">
-    <div class="container mx-auto bg-white shadow-xl rounded-lg min-h-screen">
-        
-        <div class="sticky top-0 bg-white border-b border-amber-500 z-30 shadow-md">
-            <div id="tabs" class="flex justify-around p-2">
-                </div>
+<body onload="init()">
+    
+    <nav id="top-nav" class="fixed top-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800 shadow-2xl z-50">
+        <div class="max-w-lg mx-auto flex justify-around items-center h-24 text-white"> 
+            <button id="tab-members" onclick="switchTab('members')" class="nav-item flex flex-col items-center p-2 pt-3 active text-indigo-400">
+                <i class="fa-solid fa-users text-xl"></i>
+                <span class="text-xs mt-1">大家</span>
+            </button>
+            <button id="tab-expenses" onclick="switchTab('expenses')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+                <i class="fa-solid fa-receipt text-xl"></i>
+                <span class="text-xs mt-1">記帳</span>
+            </button>
+            <button id="tab-result" onclick="switchTab('result')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+                <i class="fa-solid fa-calculator text-xl"></i>
+                <span class="text-xs mt-1">算錢</span>
+            </button>
+            <button id="tab-rates" onclick="switchTab('rates')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+                <i class="fa-solid fa-money-bill-transfer text-xl"></i>
+                <span class="text-xs mt-1">匯率</span>
+            </button>
+            <button id="tab-settings" onclick="switchTab('settings')" class="nav-item flex flex-col items-center p-2 pt-3 inactive text-white/60">
+                <i class="fa-solid fa-cog text-xl"></i>
+                <span class="text-xs mt-1">設定</span>
+            </button>
         </div>
+    </nav>
+    
+    <div class="max-w-lg mx-auto p-4 pt-6">
 
-        <div id="content" class="p-4 sm:p-6 space-y-6">
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 mb-6 flex items-center">
+            <i class="fa-solid fa-plane-departure text-indigo-600 mr-3"></i> 旅行記帳本
+            <div id="rate-warning" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-lg font-bold ml-auto hidden shadow-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 匯率異常</div>
+        </h1>
+
+        <section id="view-members" class="space-y-6 animate-fade-in pb-10">
+            
+            <div id="rate-settings-container" class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-yellow-400">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center mb-3">
+                    <i class="fa-solid fa-gear text-yellow-600 mr-2"></i> 匯率功能設定
+                </h3>
+                <div class="flex justify-between items-center mb-4">
+                    <label for="base-currency-select" class="block text-gray-500 font-bold">基準幣別</label>
+                    <select id="base-currency-select" onchange="switchBaseCurrency(this.value)" class="border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                        </select>
+                </div>
+                <button onclick="fetchLiveRates()" class="w-full bg-blue-500 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-blue-600">
+                    <i class="fa-solid fa-arrow-rotate-right mr-2"></i> 手動網路即時更新
+                </button>
+                <div id="calc-rate-info" class="text-center text-sm text-gray-500 mt-2">使用儲存資料</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-indigo-400">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fa-solid fa-user-plus text-indigo-500 mr-2"></i> 誰要加入？
+                </h3>
+                <div class="flex gap-3">
+                    <input type="text" id="input-member-name" placeholder="輸入名字 (例如: 阿公)" class="flex-1 border-2 border-gray-300 rounded-xl px-4 text-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" onkeypress="if(event.key === 'Enter') addMember()">
+                    <button onclick="addMember()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-md btn-big"> 加入 </button>
+                </div>
             </div>
 
-        <div id="toast-container"></div>
+            <div class="bg-green-100 p-5 rounded-2xl shadow-lg border-2 border-green-200">
+                <h3 class="text-lg font-bold text-green-800 mb-3 flex items-center">
+                    <i class="fa-solid fa-money-bill-wave mr-2"></i> 大家一起交公費
+                </h3>
+                <div class="flex flex-col gap-3">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">追加公費幣別 (<span class="current-base-cur">TWD</span>)</label>
+                        <input type="number" id="batch-prepaid-amount" placeholder="每人交多少? (例如 1000)" step="0.01" inputmode="decimal" class="w-full border-2 border-green-300 rounded-xl px-4 py-3 text-xl font-bold focus:border-green-500">
+                    </div>
+                    <button onclick="batchAddPrepaid()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center">
+                        <i class="fa-solid fa-plus-circle mr-2"></i> 確定！每人都交錢
+                    </button>
+                </div>
+            </div>
+            <div id="members-section">
+                <h3 class="text-lg font-bold text-gray-600 mb-2 pl-2">目前有誰在旅行?</h3>
+                <div id="members-list" class="space-y-3">
+                    </div>
+            </div>
+
+            <div class="bg-yellow-50 p-5 rounded-2xl shadow-lg border-l-8 border-yellow-400">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fa-solid fa-coins text-yellow-600 mr-2"></i> 公款錢包設定
+                </h3>
+                <div class="flex justify-between items-center mb-4">
+                    <label for="public-fee-collector-select" class="block text-gray-500 font-bold">公款由誰代墊/代收?</label>
+                    <select id="public-fee-collector-select" onchange="switchPublicFeeCollector(this.value)" class="border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-yellow-500">
+                        </select>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label class="block text-gray-500 font-bold">公款餘額 (<span class="current-base-cur">TWD</span>)</label>
+                    <p id="public-fee-balance" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+            </div>
+
+            <div id="tags-setting-section" class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-cyan-400">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fa-solid fa-tags text-cyan-500 mr-2"></i> 自訂成員標籤
+                </h3>
+                <div class="flex gap-3 mb-4">
+                    <input type="text" id="input-tag-name" placeholder="標籤名稱 (例如: 司機)" class="flex-1 border-2 border-gray-300 rounded-xl px-4 text-lg focus:border-cyan-500" onkeypress="if(event.key === 'Enter') addCustomTag()">
+                    <button onclick="addCustomTag()" class="bg-cyan-500 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-md btn-big"> 新增 </button>
+                </div>
+                <div id="custom-tags-list" class="flex flex-wrap gap-2">
+                    </div>
+            </div>
+        </section>
+
+        <section id="view-expenses" class="space-y-6 animate-fade-in pb-10 hidden">
+            <div class="bg-white p-6 rounded-3xl shadow-xl border-2 border-indigo-100">
+                <h2 class="text-2xl font-bold text-center text-indigo-800 mb-6 flex justify-center items-center">
+                    <span class="bg-indigo-100 p-2 rounded-full mr-2"><i class="fa-solid fa-pen"></i></span> 記一筆花費
+                </h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-gray-500 font-bold mb-1 ml-1">1. 花了多少錢？</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="exp-amount" placeholder="0" inputmode="decimal" step="0.01" class="flex-1 bg-gray-50 border-2 border-gray-300 rounded-2xl px-4 py-4 font-mono font-bold text-4xl text-indigo-700 text-center focus:border-indigo-500">
+                            <div class="w-1/3">
+                                <select id="exp-currency" class="w-full h-full bg-white border-2 border-gray-300 rounded-2xl px-2 font-bold text-lg text-center">
+                                    </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-500 font-bold mb-1 ml-1">2. 買了什麼？</label>
+                        <div class="space-y-2"> <input type="text" id="exp-title" placeholder="輸入名稱 (例如：晚餐、計程車)" class="w-full border-2 border-gray-300 rounded-xl px-3 py-1.5 font-bold text-base focus:border-indigo-500" onkeypress="if(event.key === 'Enter') addExpense()">
+                            <select id="exp-category" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-base text-center focus:border-indigo-500">
+                                <option value="">選擇類別</option>
+                                <option value="餐飲">🍔 餐飲</option>
+                                <option value="交通">🚗 交通</option>
+                                <option value="住宿">🏠 住宿</option>
+                                <option value="門票">🎟️ 門票</option>
+                                <option value="購物">🛍️ 購物</option>
+                                <option value="其他">💡 其他</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="favorites-list" class="flex flex-wrap gap-2 border-t pt-3 border-gray-100">
+                        <button onclick="openFavoriteModal()" class="text-gray-400 hover:text-indigo-500 text-sm font-bold flex items-center">
+                            <i class="fa-solid fa-star mr-1"></i> 編輯常用清單
+                        </button>
+                        </div>
+
+                    <div>
+                        <label class="block text-gray-500 font-bold mb-1 ml-1">3. 誰出的錢？</label>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+                                <label for="is-public-fee" class="flex-1 font-bold text-lg text-gray-700 cursor-pointer">
+                                    公款支出
+                                </label>
+                                <input type="checkbox" id="is-public-fee" onchange="toggleExpenseType(this.checked)" class="h-6 w-6 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+                            </div>
+                            <div id="individual-payer-select-container">
+                                <select id="exp-payer" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                                    </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="targets-section">
+                        <label class="block text-gray-500 font-bold mb-1 ml-1">4. 誰要分攤？</label>
+                        <div id="targets-list" class="grid grid-cols-4 gap-2">
+                            </div>
+                        <div class="flex justify-end mt-2">
+                            <button onclick="toggleAllTargets()" class="text-sm text-indigo-500 hover:underline w-full text-right">全選 / 取消</button>
+                        </div>
+                    </div>
+                    
+                    <div id="public-fee-note" class="bg-red-50 p-3 rounded-xl text-red-600 text-sm font-bold hidden">
+                        <i class="fa-solid fa-circle-info mr-1"></i> 這筆錢會從「公款錢包」扣除，並算在所有人的帳上。
+                    </div>
+                </div>
+
+                <button onclick="addExpense()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-xl shadow-lg btn-big flex justify-center items-center mt-6">
+                    <i class="fa-solid fa-check mr-2"></i> 記下來
+                </button>
+            </div>
+
+            <div>
+                <h3 class="text-xl font-bold text-gray-700 mb-3 ml-2">最近記了什麼?</h3>
+                <div id="expenses-list" class="space-y-3 pb-20">
+                    </div>
+            </div>
+        </section>
+
+        <section id="view-result" class="space-y-6 animate-fade-in pb-10 hidden">
+            <h2 class="text-2xl font-bold text-center text-gray-900 mb-6 flex justify-center items-center">
+                <span class="bg-yellow-100 p-2 rounded-full mr-2"><i class="fa-solid fa-receipt text-yellow-500"></i></span> 結算結果 (<span class="current-base-cur">TWD</span>)
+            </h2>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-red-50 p-4 rounded-2xl shadow-md border-b-4 border-red-400">
+                    <p class="text-sm font-medium text-red-500">總花費 (結算幣別)</p>
+                    <p id="total-spend" class="text-2xl font-bold text-red-600 mt-1">0</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-2xl shadow-md border-b-4 border-green-400">
+                    <p class="text-sm font-medium text-green-700">總預付/公費 (結算幣別)</p>
+                    <p id="total-prepaid" class="text-2xl font-bold text-green-700 mt-1">0</p>
+                </div>
+            </div>
+
+            <div id="member-balance-list" class="space-y-3">
+                </div>
+
+            <div>
+                <h3 class="text-xl font-bold text-gray-700 mb-3 ml-2 flex items-center">
+                    <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 mr-2"></i> 轉帳結算計畫
+                </h3>
+                <div id="settlement-plan" class="space-y-3">
+                    <div id="plan-loading" class="text-center text-gray-400 py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-lg">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> 正在計算...
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="copyReport()" class="bg-gray-800 text-white py-4 rounded-2xl font-bold text-lg shadow hover:bg-black btn-big">
+                    <i class="fa-solid fa-copy mr-2"></i> 複製算錢結果 (傳LINE)
+                </button>
+            </div>
+            
+            <div class="h-10"></div>
+        </section>
+
+        <section id="view-rates" class="space-y-6 animate-fade-in pb-10 hidden"> 
+            
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-indigo-400">
+                <div class="flex justify-between items-start mb-2"> 
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center"> 
+                        <i class="fa-solid fa-calculator text-indigo-500 mr-2"></i> 換匯計算機 
+                    </h3> 
+                    <span id="rate-source-badge" class="text-xs bg-gray-200 text-gray-500 px-2 py-1 rounded font-bold">載入中...</span>
+                </div> 
+                <div class="flex flex-col gap-3"> 
+                    <div class="space-y-2"> 
+                        <label for="calc-amount" class="block text-sm font-medium text-gray-700">換算金額 (來源)</label>
+                        <input type="number" id="calc-amount" placeholder="多少錢?" oninput="updateCalculator()" step="0.01" class="w-full border-2 border-gray-300 rounded-xl px-3 py-2 font-bold text-lg text-gray-700 focus:border-indigo-500"> 
+                        <select id="calc-from" onchange="updateCalculator()" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-base text-center focus:border-indigo-500"> 
+                            </select> 
+                    </div> 
+                    <div class="text-center text-gray-500 font-bold text-lg"><i class="fa-solid fa-arrows-up-down"></i></div> 
+                    <div class="space-y-2"> 
+                        <label for="calc-amount-to" class="block text-sm font-medium text-gray-700">換算金額 (目標)</label>
+                        <input type="number" id="calc-amount-to" placeholder="多少錢?" oninput="updateCalculator(true)" step="0.01" class="w-full border-2 border-gray-300 rounded-xl px-3 py-2 font-bold text-lg text-gray-700 focus:border-indigo-500"> 
+                        <select id="calc-to" onchange="updateCalculator()" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-base text-center focus:border-indigo-500"> 
+                            </select> 
+                    </div>
+                </div> 
+                <div id="calc-result" class="mt-4 text-center border-t border-gray-100 pt-3"> 
+                    <p class="text-gray-500 text-sm">換算結果 (約)</p> 
+                    <p class="text-4xl font-bold text-indigo-600"><span id="calc-result-amount">0</span> <span id="calc-result-cur" class="text-lg">TWD</span></p> 
+                </div> 
+            </div>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-yellow-400">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center mb-4">
+                    <i class="fa-solid fa-cloud-arrow-down text-yellow-600 mr-2"></i> 即時匯率參考 (TWD 基準)
+                </h3>
+                <div class="text-center">
+                    <fxwidget-er inverse="false" amount="100" decimals="2" large="false" shadow="true" symbol="true" flag="true" changes="true" grouping="true" border="false" main-curr="TWD" sel-curr="EUR,USD,CNY,JPY,THB" background-color="#1dacd6"></fxwidget-er>
+                    <a href="https://currencyrate.today/" target="_blank" class="text-xs text-gray-400 hover:text-indigo-500 mt-2 block">Powered by CurrencyRate</a>
+                </div>
+            </div>
+
+            <div id="rate-list-display" class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-green-500">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center mb-3">
+                    <i class="fa-solid fa-list-check text-green-600 mr-2"></i> 編輯/自訂匯率清單 (1 單位他國幣別 = ? 單位 <span class="current-base-cur">TWD</span>)
+                </h3>
+                <div id="rates-list" class="space-y-3">
+                    </div>
+            </div>
+
+        </section>
+
+        <section id="view-settings" class="space-y-6 animate-fade-in pb-10 hidden">
+            <h2 class="text-2xl font-bold text-center text-gray-900 mb-6 flex justify-center items-center">
+                <span class="bg-gray-200 p-2 rounded-full mr-2"><i class="fa-solid fa-cog text-gray-600"></i></span> 備份與設定
+            </h2>
+
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-indigo-400 space-y-4">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                    <i class="fa-solid fa-cloud-arrow-down text-indigo-500 mr-2"></i> 資料備份/匯入
+                </h3>
+                <button onclick="exportData('json')" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-indigo-700">
+                    <i class="fa-solid fa-download mr-2"></i> 匯出備份檔案 (.json)
+                </button>
+                <button onclick="exportData('text')" class="w-full bg-indigo-500 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-indigo-600">
+                    <i class="fa-solid fa-file-lines mr-2"></i> 匯出純文字檔 (.txt)
+                </button>
+                <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+                <button onclick="document.getElementById('import-file').click()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-gray-300">
+                    <i class="fa-solid fa-upload mr-2"></i> 匯入備份檔案
+                </button>
+            </div>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-cyan-400 space-y-4">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                    <i class="fa-solid fa-lightbulb text-cyan-500 mr-2"></i> 意見反應與問題回報
+                </h3>
+                <p class="text-sm text-gray-600">
+                    如果您在使用上有任何問題或建議，歡迎透過電子郵件回報。
+                </p>
+                <a href="mailto:ven691026@gmail.com?subject=%5B%E6%97%85%E8%A1%8C%E8%A8%98%E5%B8%B3%E6%9C%AC%20V8.9a%20%E6%84%8F%E8%A6%8B%E5%9B%9E%E9%A5%8B%5D&body=%E6%84%8F%E8%A6%8B/%E5%95%8F%E9%A1%8C%E9%A1%9E%E5%9E%8B:%20%5B%E4%BE%8B%E5%A6%82%EF%BC%9A%E9%8C%AF%E8%AA%A4%E5%9B%9E%E5%A0%B1/%E5%8A%9F%E8%83%BD%E5%BB%BA%E8%AD%B0%5D%0A-------------------------------------------%0A%E5%95%8F%E9%A1%8C%E6%8F%8F%E8%BF%B0%3A%0A%5B%E8%AB%8B%E8%A9%B3%E7%B4%B0%E6%8F%8F%E8%BF%B0%E6%82%A8%E9%81%87%E5%88%B0%E7%9A%84%E5%95%8F%E9%A1%8C%E6%88%96%E6%82%A8%E7%9A%84%E5%BB%BA%E8%AD%B0%5D%0A%0A%0AApp%20%E7%89%88%E6%9C%AC%3A%20V8.9a%0A%E8%A3%9D%E7%BD%AE%E8%B3%87%E8%A8%8A%3A%20%5B%E4%BE%8B%E5%A6%82%EF%BC%9A%5D" 
+                    class="w-full bg-cyan-600 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-cyan-700">
+                    <i class="fa-solid fa-envelope mr-2"></i> 寄送電子郵件回報
+                </a>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border-l-8 border-red-400">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center mb-3">
+                    <i class="fa-solid fa-skull-crossbones text-red-500 mr-2"></i> 清除所有資料
+                </h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    此操作會永久刪除所有成員、花費、結算和設定資料，請謹慎操作。
+                </p>
+                <button onclick="confirmClearData()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-lg shadow-md btn-big flex justify-center items-center hover:bg-red-700">
+                    <i class="fa-solid fa-trash-can mr-2"></i> 確認清除所有資料
+                </button>
+            </div>
+
+            <p class="text-center text-xs text-gray-400 pt-10">旅行記帳本 V8.9a | By Gemini</p>
+        </section>
+
     </div>
 
-    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden justify-center items-center">
+    <div id="favorite-modal" class="fixed inset-0 z-[60] hidden flex justify-center items-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeFavoriteModal()"></div>
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state" id="favorite-panel">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4 text-center border-b pb-3">編輯常用清單</h3>
+            <div id="favorite-list-editor" class="max-h-[85vh] overflow-y-auto space-y-3">
+                </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                <input type="text" id="new-favorite-title" placeholder="名稱 (例如: 飲料)" class="flex-1 border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg">
+                <input type="text" id="new-favorite-category" placeholder="類別圖示 (例如: ☕)" class="w-16 border-2 border-gray-300 rounded-xl px-2 py-2 text-lg text-center">
+                <button onclick="addFavoriteItem()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold btn-big">新增</button>
+            </div>
+            <button onclick="closeFavoriteModal()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow-md btn-big mt-4">關閉</button>
         </div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 z-[60] hidden flex justify-center items-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeEditModal()"></div>
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state" id="edit-panel">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4 text-center border-b pb-3">修改消費內容</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">買了什麼?</label>
+                    <input type="text" id="edit-title" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">金額與幣別</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="edit-amount" step="0.01" class="flex-1 border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                        <select id="edit-currency" class="w-1/3 border-2 border-gray-300 rounded-xl px-2 py-2 font-bold text-lg text-center">
+                            </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">日期 (YYYY-MM-DD)</label>
+                    <input type="date" id="edit-date" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500 bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-gray-500 font-bold mb-1 text-sm">類別</label>
+                    <select id="edit-category" class="w-full border-2 border-gray-300 rounded-xl px-4 py-2 font-bold text-lg focus:border-indigo-500">
+                        <option value="餐飲">🍔 餐飲</option>
+                        <option value="交通">🚗 交通</option>
+                        <option value="住宿">🏠 住宿</option>
+                        <option value="門票">🎟️ 門票</option>
+                        <option value="購物">🛍️ 購物</option>
+                        <option value="其他">💡 其他</option>
+                        <option value="">無類別</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveEdit()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg shadow hover:bg-indigo-700 btn-big">儲存變更</button>
+                <button onclick="closeEditModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow hover:bg-gray-300 btn-big">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="member-tag-modal" class="fixed inset-0 z-[60] hidden flex justify-center items-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeMemberTagModal()"></div>
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state" id="tag-panel">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4 text-center border-b pb-3">編輯標籤：<span id="member-tag-name"></span></h3>
+            <div id="member-tags-list" class="flex flex-wrap gap-2 max-h-80 overflow-y-auto">
+                </div>
+            <button onclick="closeMemberTagModal()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow-md btn-big mt-6">完成</button>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="fixed inset-0 z-[70] hidden flex justify-center items-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative modal-base modal-hidden-state">
+            <div id="modal-icon" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4 text-blue-500 text-3xl">
+                <i class="fa-solid fa-info"></i>
+            </div>
+            <h3 id="modal-title" class="text-xl font-bold text-gray-900 mb-2 text-center">標題</h3>
+            <p id="modal-message" class="text-gray-600 mb-6 text-center text-lg">訊息</p>
+            <div id="modal-actions" class="flex gap-3">
+                </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-4 py-3 rounded-full shadow-xl transition-all transform z-[70] flex items-center gap-3 pointer-events-none opacity-0 translate-y-[-100%]">
+        <i class="fa-solid fa-circle-check text-green-400 text-2xl"></i>
+        <span id="toast-msg">複製好了！</span>
+    </div>
+
+    <script async src="https://s.fx-w.io/widgets/exchange-rates/latest.js"></script>
 
     <script>
-        // ==========================================================
-        // V8.9b 核心邏輯 - 程式碼修復與手機優化
-        // ==========================================================
+        // 設定唯一的 Key，確保資料獨立
+        const STORAGE_KEY = 'trip_account_v8_clean';
+        const DEFAULT_TAGS = [{ key: 'Drinker', name: '🍺 喝酒' }, { key: 'Vegetarian', name: '🥦 吃素' }, { key: 'Driver', name: '🚗 司機' }, { key: 'Kid', name: '👶 小孩' }];
+        const ALL_CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'CNY', 'HKD', 'KRW', 'THB', 'GBP', 'AUD', 'CAD', 'SGD'];
+        const DEFAULT_EXCHANGE_RATES = { 'TWD': 1.0, 'USD': 32.0, 'JPY': 0.21, 'EUR': 34.5, 'CNY': 4.4, 'HKD': 4.1, 'KRW': 0.024, 'THB': 0.9, 'GBP': 39.0, 'AUD': 22.0, 'CAD': 23.5, 'SGD': 24.0 };
+        
+        // V8.9a 修正：檢查 localStorage 可用性，移除非持久化儲存的 fallback
+        let localStorageIsAvailable = true;
 
-        const APP_VERSION = 'V8.9b';
-        const STORAGE_KEY = 'tripAccountData_V8_9'; // 變更儲存Key以避免舊版本衝突
-        let data = initializeData();
-        let settlementResult = null;
-        let currentTab = 'account';
-        let currentEditingMemberId = null; // 用於編輯常用清單
-
-        // 預設支援的幣別列表 (可擴充)
-        const CURRENCIES = {
-            'TWD': '新台幣', 'USD': '美元', 'EUR': '歐元', 'JPY': '日圓', 'KRW': '韓元', 'CNY': '人民幣', 'HKD': '港幣', 'THB': '泰銖', 'VND': '越南盾'
-        };
-
-        // --- 資料初始化與儲存 ---
-        function initializeData() {
-            return {
-                tripName: '我的旅行記帳本',
-                baseCurrency: 'TWD',
-                members: [{ id: 'm1', name: '大雄', tags: ['住宿', '交通', '食物'] }],
-                bills: [],
-                exchangeRates: { 'TWD': 1 }, // TWD 永遠為 1
-                nextMemberId: 2,
-                nextBillId: 1,
-                // V8.9 新增常用標籤功能
-                customTags: [
-                    { key: 't1', name: '住宿' },
-                    { key: 't2', name: '機票' },
-                    { key: 't3', name: '餐飲' },
-                    { key: 't4', name: '景點門票' }
-                ],
-                nextTagKey: 5
-            };
+        function checkLocalStorageAvailability() {
+            try {
+                const testKey = '__test__';
+                localStorage.setItem(testKey, testKey);
+                localStorage.removeItem(testKey);
+                localStorageIsAvailable = true;
+            } catch (e) {
+                localStorageIsAvailable = false;
+                console.error('Local storage is blocked or unavailable:', e);
+                // 首次載入時提醒使用者
+                setTimeout(() => {
+                    showToast('⚠ 警告：資料儲存失敗！請勿從本機檔案開啟，或檢查瀏覽器是否封鎖網站資料。', 'error', 10000); 
+                }, 1000);
+            }
         }
+        
+        // 全域變數
+        let data = {};
+        let settlementResult = null;
+        let currentEditingId = null; 
+        let currentEditingMemberId = null; 
+        let liveRates = null; 
+        let currentModal = null; 
+        let currentOnConfirm = null; 
+
+        // --- Data Persistence and Initialization ---
 
         function loadData() {
-            try {
-                if (typeof localStorage === 'undefined') {
-                    showToast('⚠️ 瀏覽器不支援資料儲存，重新整理資料會消失。');
-                    return initializeData();
-                }
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const loadedData = JSON.parse(saved);
-                    // 檢查並補齊 V8.9 新增的欄位
-                    if (!loadedData.customTags) loadedData.customTags = initializeData().customTags;
-                    if (!loadedData.nextTagKey) loadedData.nextTagKey = initializeData().nextTagKey;
-                    if (!loadedData.baseCurrency) loadedData.baseCurrency = 'TWD';
-                    
-                    data = loadedData;
-                    // 確保 exchangeRates 中基準幣別為 1
-                    data.exchangeRates[data.baseCurrency] = 1;
-                } else {
-                    data = initializeData();
-                }
-                showToast(`數據載入成功 (${APP_VERSION})`);
+            checkLocalStorageAvailability();
 
-                // 如果當前基準幣別不在 CURRENCIES 裡，則加入
-                if (!CURRENCIES[data.baseCurrency]) {
-                     CURRENCIES[data.baseCurrency] = data.baseCurrency;
+            let stored = null;
+            if (localStorageIsAvailable) {
+                try {
+                    stored = localStorage.getItem(STORAGE_KEY);
+                } catch (e) {
+                    // This catch is mostly redundant due to the check, but good for safety
+                    console.error("Error retrieving data from localStorage:", e);
                 }
+            }
 
-            } catch (e) {
-                console.error("載入數據失敗:", e);
-                showToast(`❌ 數據載入失敗！請檢查瀏覽器設定。`);
-                // 如果載入失敗，使用預設數據
-                data = initializeData();
+            if (stored) {
+                data = JSON.parse(stored);
+            } else {
+                // Initialize default data structure
+                data = {
+                    baseCurrency: 'TWD',
+                    publicFeeCollectorId: '',
+                    customTags: JSON.parse(JSON.stringify(DEFAULT_TAGS)),
+                    exchangeRates: JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES)),
+                    expenses: [],
+                    payments: [],
+                    members: [],
+                    favorites: [] 
+                };
+            }
+            // Ensure essential fields exist after load
+            if (!data.baseCurrency) data.baseCurrency = 'TWD';
+            if (!data.customTags) data.customTags = JSON.parse(JSON.stringify(DEFAULT_TAGS));
+            if (!data.exchangeRates) data.exchangeRates = JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES));
+            if (!data.expenses) data.expenses = [];
+            if (!data.payments) data.payments = [];
+            if (!data.members) data.members = [];
+            if (!data.favorites) data.favorites = []; 
+
+            data.exchangeRates['TWD'] = 1.0;
+            // 確保公款代墊人存在
+            if (data.members.length > 0 && (!data.publicFeeCollectorId || !data.members.find(m => m.id === data.publicFeeCollectorId))) {
+                 data.publicFeeCollectorId = data.members[0].id;
             }
         }
 
         function saveData() {
-            try {
-                if (typeof localStorage === 'undefined') {
-                    console.warn('LocalStorage 不可用。');
-                    return;
+            if (localStorageIsAvailable) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error('Failed to save data to local storage:', e);
+                    showToast('資料儲存失敗！請檢查瀏覽器設定或是否從本機檔案開啟。', 'error');
                 }
-                // 確保 exchangeRates 中基準幣別為 1
-                data.exchangeRates[data.baseCurrency] = 1;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                // showToast('數據已儲存'); // 儲存頻繁，不顯示 Toast
-            } catch (e) {
-                console.error("儲存數據失敗:", e);
-                showToast(`❌ 數據儲存失敗！`);
+            } else {
+                 showToast('⚠ 資料未儲存！請勿從本機檔案開啟，或檢查瀏覽器隱私設定。', 'error');
             }
-        }
-        
-        // --- 通用 UI 函數 ---
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            container.appendChild(toast);
-            
-            // 延遲顯示
-            setTimeout(() => {
-                toast.classList.add('show');
-            }, 10);
-
-            // 延遲消失
-            setTimeout(() => {
-                toast.classList.remove('show');
-                // 延遲移除 DOM
-                setTimeout(() => {
-                    container.removeChild(toast);
-                }, 300); 
-            }, 3000);
+            renderAll();
         }
 
-        function renderCurrencySelect(id, selectedCurrency, className = '') {
-            let html = `<select id="${id}" class="p-2 border rounded-md shadow-sm ${className}">`;
+        function init() {
+            loadData();
+            renderAll();
             
-            // 確保基準幣別是第一個選項
-            html += `<option value="${data.baseCurrency}" ${data.baseCurrency === selectedCurrency ? 'selected' : ''}>${data.baseCurrency}</option>`;
+            // 自動從網路更新匯率
+            fetchLiveRates(); 
 
-            // 其他幣別
-            Object.keys(CURRENCIES).sort().forEach(code => {
-                if (code !== data.baseCurrency) {
-                    html += `<option value="${code}" ${code === selectedCurrency ? 'selected' : ''}>${code}</option>`;
+            // 確保一開始顯示第一個 tab
+            switchTab('members');
+        }
+
+        // --- Currency and Rate Logic ---
+
+        function getRateToBase(currency) {
+            if (currency === data.baseCurrency) return 1.0;
+            const rateToTWD = data.exchangeRates[currency] || 1.0;
+            const baseRateToTWD = data.exchangeRates[data.baseCurrency] || 1.0;
+            return baseRateToTWD === 0 ? 0 : rateToTWD / baseRateToTWD;
+        }
+
+        function updateRatesFromLive() {
+            if (liveRates) {
+                ALL_CURRENCIES.forEach(c => {
+                    if (liveRates[c] !== undefined) {
+                        // rate is TWD to X, we need X to TWD
+                        const twdRate = 1.0 / liveRates[c];
+                        data.exchangeRates[c] = parseFloat(twdRate.toFixed(4));
+                    }
+                });
+                
+                data.exchangeRates['TWD'] = 1.0; 
+
+                const badge = document.getElementById('rate-source-badge');
+                if (badge) {
+                    badge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold";
+                    badge.innerText = "🟢 網路即時";
                 }
-            });
-
-            html += `</select>`;
-            return html;
-        }
-
-        // --- 標籤頁導航 ---
-        const TABS = [
-            { id: 'account', name: '記帳', icon: 'fa-regular fa-clipboard' },
-            { id: 'members', name: '成員', icon: 'fa-regular fa-user' },
-            { id: 'settlement', name: '算錢', icon: 'fa-solid fa-coins' },
-            { id: 'settings', name: '設定', icon: 'fa-solid fa-gear' }
-        ];
-
-        function renderTabs() {
-            const tabsDiv = document.getElementById('tabs');
-            tabsDiv.innerHTML = TABS.map(tab => `
-                <button 
-                    id="tab-${tab.id}"
-                    class="tab-button flex-1 text-center py-2 mx-1 rounded-lg border-2 border-transparent transition-colors hover:border-amber-400 text-gray-700 ${currentTab === tab.id ? 'active' : ''}"
-                    onclick="switchTab('${tab.id}')"
-                >
-                    <i class="${tab.icon} mr-1 sm:mr-2"></i>
-                    <span class="text-sm sm:text-base">${tab.name}</span>
-                </button>
-            `).join('');
-        }
-
-        function switchTab(tabId) {
-            currentTab = tabId;
-            renderTabs();
-            renderContent();
-            saveData(); // 切換頁面時儲存一次
-        }
-
-        function renderContent() {
-            const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = '';
-            
-            document.title = `${data.tripName} - ${TABS.find(t => t.id === currentTab)?.name}`;
-
-            switch (currentTab) {
-                case 'account':
-                    renderAccountPage(contentDiv);
-                    break;
-                case 'members':
-                    renderMembersPage(contentDiv);
-                    break;
-                case 'settlement':
-                    renderSettlementPage(contentDiv);
-                    break;
-                case 'settings':
-                    renderSettingsPage(contentDiv);
-                    break;
-                default:
-                    contentDiv.innerHTML = `<p class="text-red-500">無效的頁面</p>`;
+                
+                showToast('已成功更新網路即時匯率');
+                saveData(); 
             }
+        }
+
+        function fetchLiveRates() {
+            const badge = document.getElementById('rate-source-badge'), info = document.getElementById('calc-rate-info');
+            if(badge) { 
+                badge.className = "text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold"; 
+                badge.innerText = "更新中..."; 
+            }
+            if(info) info.innerText = "正在連線到網路匯率...";
+            
+            // 使用 TWD 為基準獲取匯率 (1 TWD = ? Other Currencies)
+            fetch('https://api.exchangerate-api.com/v4/latest/TWD')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.rates) {
+                        liveRates = d.rates; 
+                        if(!liveRates['TWD']) liveRates['TWD'] = 1;
+                        updateRatesFromLive(); 
+                    } else {
+                        if(badge) {
+                            badge.className = "text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold";
+                            badge.innerText = "❌ 更新失敗";
+                        }
+                        showToast('網路匯率更新失敗：資料格式錯誤', 'error');
+                    }
+                })
+                .catch(e => {
+                    if(badge) {
+                        badge.className = "text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold";
+                        badge.innerText = "❌ 更新失敗";
+                    }
+                    showToast('網路匯率更新失敗：連線問題', 'error');
+                    if(info) info.innerText = "無法連線到網路匯率，使用儲存資料";
+                    updateCalculator();
+                    calculateSettlement();
+                });
         }
         
-        // --- 記帳頁面 (Account) ---
-        function renderAccountPage(container) {
-            container.innerHTML = `
-                <h2 class="text-2xl font-bold text-amber-700">${data.tripName} 總覽</h2>
-                <div class="space-y-4">
-                    <div class="p-4 border border-amber-300 bg-amber-50 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold text-amber-800 mb-3"><i class="fa-solid fa-plus-circle mr-2"></i>新增記帳</h3>
-                        
-                        <div class="mb-3">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">花的幣別 (預設：${data.baseCurrency})</label>
-                            ${renderCurrencySelect('currencySelect', data.baseCurrency, 'w-full')}
-                        </div>
-
-                        <div class="mb-3 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                            <div class="flex-1">
-                                <label for="spentAmount" class="block text-sm font-medium text-gray-700">花了多少錢</label>
-                                <input type="number" id="spentAmount" placeholder="金額" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500" min="0">
-                            </div>
-                            <div class="flex-1">
-                                <label for="billName" class="block text-sm font-medium text-gray-700">用途/名稱</label>
-                                <input type="text" id="billName" placeholder="例如：晚餐、計程車" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                            </div>
-                        </div>
-
-                        <div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-                            <div class="w-full sm:w-1/2">
-                                <label for="payerSelect" class="block text-sm font-medium text-gray-700">誰付的錢</label>
-                                ${renderMemberSelect('payerSelect', data.members[0]?.id || '')}
-                            </div>
-                            <div class="w-full sm:w-1/2">
-                                <label for="sharersInput" class="block text-sm font-medium text-gray-700">誰要分攤 (多選)</label>
-                                ${renderSharersSelect('sharersInput')}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">快速標籤</label>
-                            <div id="quickTags" class="flex flex-wrap gap-2">
-                                </div>
-                            <input type="text" id="customTagName" placeholder="自定義標籤名稱" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                        </div>
-                        
-
-                        <button onclick="addBill()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg transition-colors">
-                            <i class="fa-solid fa-plus-circle mr-2"></i>確認新增
-                        </button>
-                    </div>
-
-                    <div class="pt-4 border-t border-gray-300">
-                        <h3 class="text-xl font-semibold text-amber-800 mb-3"><i class="fa-solid fa-receipt mr-2"></i>所有花費 (${data.baseCurrency})</h3>
-                        <div id="billList" class="space-y-3">
-                            </div>
-                    </div>
-                </div>
-            `;
+        function updateRate(currency, value) {
+            let rateInput = parseFloat(value);
             
-            // 設置分攤者預設為所有成員
-            document.getElementById('sharersInput').value = data.members.map(m => m.id);
-
-            renderBillList();
-            renderQuickTags();
-        }
-
-        function renderMemberSelect(id, selectedId) {
-            let html = `<select id="${id}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">`;
-            data.members.forEach(member => {
-                html += `<option value="${member.id}" ${member.id === selectedId ? 'selected' : ''}>${member.name}</option>`;
-            });
-            html += `</select>`;
-            return html;
-        }
-        
-        function renderSharersSelect(id) {
-            let html = `<select multiple id="${id}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm h-28 custom-scroll">`;
-            data.members.forEach(member => {
-                // 預設全部選中
-                html += `<option value="${member.id}" selected>${member.name}</option>`; 
-            });
-            html += `</select>`;
-            return html;
-        }
-
-        function renderQuickTags() {
-            const container = document.getElementById('quickTags');
-            if (!container) return;
-            container.innerHTML = '';
-
-            // 常用標籤
-            data.customTags.forEach(tag => {
-                container.innerHTML += `
-                    <button onclick="document.getElementById('customTagName').value='${tag.name}'" class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full hover:bg-blue-200 transition-colors">
-                        ${tag.name}
-                    </button>
-                `;
-            });
-            // 總是在末尾加上一個「自定義」按鈕
-            container.innerHTML += `
-                <button onclick="document.getElementById('customTagName').value=''" class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full hover:bg-gray-200 transition-colors">
-                    <i class="fa-solid fa-pencil mr-1"></i>自定義
-                </button>
-            `;
-        }
-
-        function getExchangeRate(currency) {
-            // 確保基準幣別匯率是 1
-            if (currency === data.baseCurrency) return 1;
-            
-            // 嘗試取得儲存的匯率
-            let rate = data.exchangeRates[currency];
-
-            // 如果找不到，提示並預設為 1 (假設 1:1)
-            if (!rate || rate <= 0) {
-                // 為了避免重複的提示，只在計算時提示
-                console.warn(`[匯率] 找不到 ${currency} 的匯率，暫時使用 1:${data.baseCurrency} 計算。請在「設定」頁面設定匯率。`);
-                return 1;
-            }
-            return rate;
-        }
-
-        function convertToBase(amount, currency) {
-            const rate = getExchangeRate(currency);
-            return parseFloat((amount * rate).toFixed(2));
-        }
-
-        function addBill() {
-            const amount = parseFloat(document.getElementById('spentAmount').value);
-            const currency = document.getElementById('currencySelect').value;
-            const name = document.getElementById('billName').value.trim();
-            const payerId = document.getElementById('payerSelect').value;
-            const sharersInput = document.getElementById('sharersInput');
-            const sharerIds = Array.from(sharersInput.selectedOptions).map(option => option.value);
-            const tag = document.getElementById('customTagName').value.trim();
-
-            if (!amount || amount <= 0 || !name || sharerIds.length === 0) {
-                return showToast('❌ 請輸入有效金額、用途並選擇分攤者！');
-            }
-
-            // 將金額轉換為基準幣別
-            const baseAmount = convertToBase(amount, currency);
-
-            const newBill = {
-                id: `b${data.nextBillId++}`,
-                name: name,
-                amount: amount,
-                currency: currency,
-                baseAmount: baseAmount,
-                payerId: payerId,
-                sharerIds: sharerIds,
-                tag: tag,
-                timestamp: new Date().toISOString()
-            };
-
-            data.bills.unshift(newBill); // 新增到列表最前方
-            saveData();
-            
-            // 清空輸入欄
-            document.getElementById('spentAmount').value = '';
-            document.getElementById('billName').value = '';
-            document.getElementById('customTagName').value = '';
-            // 重設幣別為基準幣別 (優化需求 2)
-            document.getElementById('currencySelect').value = data.baseCurrency; 
-            // 重設分攤者為全部
-            Array.from(sharersInput.options).forEach(option => option.selected = true);
-
-
-            renderBillList();
-            showToast('✅ 記帳新增成功！');
-        }
-
-        function renderBillList() {
-            const container = document.getElementById('billList');
-            if (!container) return;
-
-            if (data.bills.length === 0) {
-                container.innerHTML = `<p class="text-gray-500 p-4 border rounded-lg text-center">目前還沒有花費紀錄喔！</p>`;
+            if (isNaN(rateInput) || rateInput <= 0) {
+                showToast('匯率值必須是正數', 'warning');
+                renderRatesList(); 
                 return;
             }
+            
+            // rateInput: 1 Other = ? Base
+            const baseToTwdRate = data.exchangeRates[data.baseCurrency] || 1.0;
+            const newTwdRate = rateInput * baseToTwdRate;
+            
+            data.exchangeRates[currency] = parseFloat(newTwdRate.toFixed(4));
 
-            container.innerHTML = data.bills.map(bill => {
-                const payerName = data.members.find(m => m.id === bill.payerId)?.name || '未知';
-                const sharerNames = bill.sharerIds.map(id => data.members.find(m => m.id === id)?.name || '?').join(', ');
-                const shareCount = bill.sharerIds.length;
-                const shareAmount = shareCount > 0 ? (bill.baseAmount / shareCount).toFixed(2) : 0;
-                const shareUnit = data.baseCurrency;
-
-                return `
-                    <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start mb-2">
-                            <h4 class="text-lg font-bold text-gray-800">${bill.name}</h4>
-                            <div class="flex space-x-2">
-                                <button onclick="editBill('${bill.id}')" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="confirmDeleteBill('${bill.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </div>
-
-                        <p class="text-sm text-gray-600 mb-1">
-                            <i class="fa-solid fa-tag mr-1"></i> 標籤: ${bill.tag || '無標籤'}
-                        </p>
-                        
-                        <div class="mb-2 p-2 bg-indigo-50 border-l-4 border-indigo-400 rounded-md">
-                            <p class="text-sm font-medium text-indigo-700">
-                                <i class="fa-solid fa-money-bill-wave mr-1"></i> **${bill.amount} ${bill.currency}**
-                                ${bill.currency !== data.baseCurrency ? `(約 ${bill.baseAmount} ${data.baseCurrency})` : ''}
-                            </p>
-                            <p class="text-xs text-indigo-600">
-                                基準幣別換算：${bill.baseAmount} ${shareUnit}
-                            </p>
-                        </div>
-
-                        <p class="text-sm text-gray-700 mb-1">
-                            <i class="fa-solid fa-person-circle-check mr-1"></i> **付款人**: ${payerName}
-                        </p>
-                        <p class="text-sm text-gray-700 mb-1">
-                            <i class="fa-solid fa-user-group mr-1"></i> **分攤者**: ${sharerNames}
-                        </p>
-                        <p class="text-sm text-amber-700 font-medium">
-                            <i class="fa-solid fa-divide mr-1"></i> **每人應分攤**: ${shareAmount} ${shareUnit}
-                        </p>
-                    </div>
-                `;
-            }).join('');
+            saveData(); 
+            showToast(`已設定 ${currency} 對 ${data.baseCurrency} 的匯率為 ${rateInput.toFixed(4)}`);
         }
 
-        function confirmDeleteBill(id) {
-            if (confirm('確定要刪除這筆記帳嗎？')) {
-                data.bills = data.bills.filter(b => b.id !== id);
-                saveData();
-                renderBillList();
-                showToast('🗑️ 記帳已刪除！');
+        function switchBaseCurrency(currency) {
+            if (data.baseCurrency === currency) return;
+            data.baseCurrency = currency;
+            saveData();
+            showToast(`結算基準幣別已切換為 ${currency}`);
+        }
+        
+        function updateCalculator(isTargetChanged = false) {
+            const fromCur = document.getElementById('calc-from').value;
+            const toCur = document.getElementById('calc-to').value;
+            const amountInput = document.getElementById('calc-amount');
+            const amountToInput = document.getElementById('calc-amount-to');
+            const resultAmountEl = document.getElementById('calc-result-amount');
+            const resultCurEl = document.getElementById('calc-result-cur');
+            
+            const rateFromToBase = getRateToBase(fromCur);
+            const rateToToBase = getRateToBase(toCur);
+            
+            const rateFromToTo = rateFromToBase / rateToToBase; 
+
+            let amount = parseFloat(amountInput.value) || 0;
+            let amountTo = parseFloat(amountToInput.value) || 0;
+            
+            if (isTargetChanged) {
+                amount = amountTo / rateFromToTo;
+                amountInput.value = amount.toFixed(2);
+            } else {
+                amountTo = amount * rateFromToTo;
+                amountToInput.value = amountTo.toFixed(2);
             }
+
+            resultAmountEl.textContent = amountTo.toFixed(2);
+            resultCurEl.textContent = toCur;
         }
 
-        // --- 成員頁面 (Members) ---
-        function renderMembersPage(container) {
-            container.innerHTML = `
-                <h2 class="text-2xl font-bold text-amber-700"><i class="fa-solid fa-user-group mr-2"></i>成員與常用清單</h2>
-                
-                <div class="p-4 border border-blue-300 bg-blue-50 rounded-lg shadow-md mb-6">
-                    <h3 class="text-xl font-semibold text-blue-800 mb-3">新增成員</h3>
-                    <input type="text" id="newMemberName" placeholder="成員姓名" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm mb-3">
-                    <button onclick="addMember()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition-colors">
-                        <i class="fa-solid fa-user-plus mr-2"></i>確認新增
-                    </button>
-                </div>
+        // --- Rendering Functions ---
 
-                <div class="pt-4 border-t border-gray-300">
-                    <h3 class="text-xl font-semibold text-amber-800 mb-3">當前成員列表</h3>
-                    <div id="memberList" class="space-y-3">
-                        ${renderMembers()}
-                    </div>
-                </div>
-            `;
+        function renderAll() {
+            renderCurrencySelectors();
+            renderMembers();
+            renderExpensesList();
+            renderRatesList(); 
+            renderFavorites(); 
+            calculateSettlement();
+        }
+
+        function renderCurrencySelectors() {
+            document.querySelectorAll('.current-base-cur').forEach(el => el.textContent = data.baseCurrency);
+
+            const baseSel = document.getElementById('base-currency-select');
+            if(baseSel) {
+                baseSel.innerHTML = ALL_CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join('');
+                baseSel.value = data.baseCurrency;
+            }
+
+            const calcFrom = document.getElementById('calc-from');
+            const calcTo = document.getElementById('calc-to');
+            const expCur = document.getElementById('exp-currency');
+
+            const opts = ALL_CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (calcFrom) { calcFrom.innerHTML = opts; if (!calcFrom.value) calcFrom.value = 'TWD'; }
+            if (calcTo) { calcTo.innerHTML = opts; calcTo.value = data.baseCurrency; }
+            if (expCur) { expCur.innerHTML = opts; if (!expCur.value) expCur.value = 'TWD'; }
+        }
+
+        function renderRatesList() {
+            const list = document.getElementById('rates-list');
+            if (!list) return;
+
+            const baseToTwdRate = data.exchangeRates[data.baseCurrency] || 1.0;
+            const ratesHtml = ALL_CURRENCIES
+                .filter(c => c !== data.baseCurrency)
+                .map(c => {
+                    const rateToTWD = data.exchangeRates[c] || DEFAULT_EXCHANGE_RATES[c] || 1.0; 
+                    const rateToDisplay = rateToTWD / baseToTwdRate; 
+                    
+                    return `
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2"> 
+                            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                                <div class="font-bold text-indigo-600 text-lg">1 ${c}</div> <div class="font-bold text-gray-500 text-sm"> = ? ${data.baseCurrency}</div> </div>
+                            <input 
+                                type="number" 
+                                step="0.0001" 
+                                value="${rateToDisplay.toFixed(4)}" 
+                                onchange="updateRate('${c}', this.value)" 
+                                class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-right font-mono text-indigo-600 font-bold text-lg bg-gray-50 focus:border-indigo-500"
+                            >
+                        </div>
+                    `;
+                })
+                .join('');
+
+            list.innerHTML = ratesHtml;
+            const titleSpan = document.querySelector('#rate-list-display h3 .current-base-cur');
+            if (titleSpan) titleSpan.textContent = data.baseCurrency;
         }
 
         function renderMembers() {
-            const container = document.getElementById('memberList');
-            if (!container && currentTab !== 'members') return; // 避免在其他頁面觸發錯誤
+             const collSelect = document.getElementById('public-fee-collector-select');
+            if(collSelect) collSelect.innerHTML = data.members.map(m => `<option value="${m.id}" ${m.id === data.publicFeeCollectorId ? 'selected' : ''}>${m.name}</option>`).join('');
+
+            const list = document.getElementById('members-list');
+            if (!list) return;
+
+            if (data.members.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">👻 還沒有人喔，快加人！</div>';
+            } else {
+                list.innerHTML = data.members.map(m => {
+                    const tagsHtml = m.tags.map(k => {
+                        const t = data.customTags.find(t => t.key === k);
+                        return t ? `<span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg text-xs font-bold mr-1">${t.name}</span>` : '';
+                    }).join('');
+                    const feeStatusClass = m.isFeeCollected ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-600 border-red-200';
+                    const feeStatusIcon = m.isFeeCollected ? 'fa-check-circle' : 'fa-circle-xmark';
+                    const feeStatusText = m.isFeeCollected ? '已交' : '還沒交';
+                    const prepaidDisplay = `${m.prepaid.toFixed(2)} <span class="text-xs text-gray-400">${m.prepaidCurrency}</span>`;
+
+                    return `
+                        <div class="bg-white rounded-2xl shadow-md border-b-4 border-gray-200 overflow-hidden">
+                            <div class="p-4 flex justify-between items-center">
+                                <h4 class="font-bold text-lg text-gray-800">${m.name}</h4>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="openMemberTagModal('${m.id}')" class="text-gray-400 hover:text-indigo-500 p-2"><i class="fa-solid fa-tag"></i></button>
+                                    <button onclick="deleteMember('${m.id}')" class="text-gray-400 hover:text-red-500 p-2"><i class="fa-solid fa-user-minus"></i></button>
+                                </div>
+                            </div>
+                            <div class="p-4 pt-0">
+                                <div class="text-sm text-gray-500 mb-2">${tagsHtml || '無標籤'}</div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <p class="text-xs text-gray-500 font-medium">預付/公費</p>
+                                        <div class="flex items-end justify-between mt-1">
+                                            <p class="text-xl font-bold text-green-700">${prepaidDisplay}</p>
+                                            <button onclick="toggleFeeCollected('${m.id}')" class="text-xs ${feeStatusClass} px-2 py-1 rounded-lg font-bold flex items-center shadow-sm">
+                                                <i class="fa-solid ${feeStatusIcon} mr-1"></i> ${feeStatusText}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <p class="text-xs text-gray-500 font-medium">預付幣別/金額</p>
+                                        <div class="flex items-end justify-between mt-1">
+                                            <select onchange="updatePrepaidCurrency('${m.id}', this.value)" class="text-base font-bold text-indigo-600 bg-transparent border-none p-0 focus:outline-none focus:ring-0">
+                                                ${ALL_CURRENCIES.map(c => `<option value="${c}" ${m.prepaidCurrency === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                            </select>
+                                            <input type="number" onchange="updatePrepaidAmount('${m.id}', this.value)" value="${m.prepaid.toFixed(2)}" step="0.01" inputmode="decimal" class="text-xl font-bold text-right text-indigo-600 w-1/2 bg-transparent border-b border-gray-300 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
             
-            const html = data.members.map(member => {
-                const totalPaid = data.bills.filter(b => b.payerId === member.id).reduce((sum, b) => sum + b.baseAmount, 0).toFixed(2);
+            const payerSelect = document.getElementById('exp-payer');
+            if (payerSelect) {
+                payerSelect.innerHTML = data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+            }
+            renderTargetList();
+            calculatePublicFeeBalance();
+            renderCustomTagsList();
+        }
+
+        function renderCustomTagsList() {
+            const list = document.getElementById('custom-tags-list');
+            if (!list) return;
+            list.innerHTML = data.customTags.map(t => `
+                <div class="flex items-center bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm font-bold shadow-sm">
+                    ${t.name}
+                    <button onclick="renameCustomTag('${t.key}')" class="ml-2 text-cyan-500 hover:text-cyan-800"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                    <button onclick="deleteCustomTag('${t.key}')" class="ml-2 text-cyan-500 hover:text-red-500"><i class="fa-solid fa-times text-xs"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function renderExpensesList() {
+            const list = document.getElementById('expenses-list');
+            if (!list) return;
+
+            if (data.expenses.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">✍️ 試著記一筆帳吧！</div>';
+                return;
+            }
+
+            list.innerHTML = data.expenses.map(e => {
+                const payer = data.members.find(m => m.id === e.payerId)?.name || '未知';
+                const targets = e.targets.map(id => data.members.find(m => m.id === id)?.name || '?').join('、');
+                // e.exchangeRate is the rate from e.currency to data.baseCurrency.
+                const baseAmount = (e.amount * e.exchangeRate).toFixed(2);
                 
                 return `
-                    <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex justify-between items-center hover:bg-gray-50 transition-colors">
-                        <div class="flex-1 min-w-0 mr-4">
-                            <p class="text-lg font-bold text-gray-800 truncate">${member.name}</p>
-                            <p class="text-sm text-gray-500">已付總額: ${totalPaid} ${data.baseCurrency}</p>
+                    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${e.payerId === data.publicFeeCollectorId ? 'border-yellow-500' : 'border-indigo-500'} flex justify-between items-center">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-800 truncate">${e.title}</span>
+                                ${e.category ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${e.category}</span>` : ''}
+                            </div>
+                            <p class="text-xl font-bold text-red-600 mt-1">${e.amount.toFixed(2)} ${e.currency}</p>
+                            <p class="text-xs text-gray-500">代墊: ${payer} | 分攤: ${targets}</p>
+                            <p class="text-xs text-gray-400 mt-1">約 ${baseAmount} ${data.baseCurrency}</p>
                         </div>
-                        <div class="flex space-x-2">
-                            <button onclick="openCustomTagModal('${member.id}')" class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full hover:bg-indigo-200 transition-colors hidden sm:block">常用清單</button>
-                            <button onclick="openCustomTagModal('${member.id}')" class="text-indigo-600 hover:text-indigo-800 sm:hidden"><i class="fa-solid fa-list-check"></i></button>
-                            <button onclick="confirmDeleteMember('${member.id}')" class="text-red-500 hover:text-red-700" title="刪除成員"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openEditModal('${e.id}')" class="text-gray-400 hover:text-blue-500 p-2"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
-            
-            if (container) container.innerHTML = html;
-            return html;
         }
 
-        function addMember() {
-            const name = document.getElementById('newMemberName').value.trim();
-            if (!name) {
-                return showToast('❌ 請輸入成員姓名！');
-            }
-            if (data.members.some(m => m.name === name)) {
-                return showToast('❌ 該成員姓名已存在！');
-            }
-
-            const newMember = {
-                id: `m${data.nextMemberId++}`,
-                name: name,
-                // V8.9 每個成員都使用全域的 customTags
-                tags: [] 
-            };
-
-            data.members.push(newMember);
-            saveData();
-            document.getElementById('newMemberName').value = '';
-            renderMembers();
-            // 在記帳頁面也要更新下拉選單
-            if (document.getElementById('payerSelect')) switchTab('account'); 
-            showToast(`✅ 成員 ${name} 已新增！`);
-        }
-        
-        function confirmDeleteMember(id) {
-            const memberName = data.members.find(m => m.id === id)?.name || '未知成員';
-            const billsInvolved = data.bills.filter(b => b.payerId === id || b.sharerIds.includes(id)).length;
-
-            if (billsInvolved > 0) {
-                if (!confirm(`成員 ${memberName} 涉及 ${billsInvolved} 筆記帳。刪除成員將導致相關記帳的付款人和分攤者欄位變成「未知」。\n\n確定要刪除嗎？`)) {
-                    return;
-                }
-            } else {
-                if (!confirm(`確定要刪除成員 ${memberName} 嗎？`)) {
-                    return;
-                }
-            }
-
-            data.members = data.members.filter(m => m.id !== id);
-            // 不修改 bills，直接讓 payerId 和 sharerIds 變成無效ID
-            saveData();
-            renderMembers();
-            // 如果在記帳頁面，需要刷新
-            if (currentTab === 'account') switchTab('account'); 
-            showToast(`🗑️ 成員 ${memberName} 已刪除！`);
-        }
-        
-        // --- 常用清單 Modal ---
-        function openCustomTagModal(memberId) {
-            currentEditingMemberId = memberId;
-            const member = data.members.find(m => m.id === memberId);
-            if (!member) return showToast('❌ 找不到該成員！');
-
-            const modalContent = `
-                <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center border-b pb-3 mb-4 sticky top-0 bg-white z-10">
-                        <h3 class="text-xl font-bold text-amber-700">${member.name} 的常用清單</h3>
-                        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                    </div>
-                    
-                    <div id="tagListContainer" class="space-y-4">
-                        </div>
-
-                    <div class="mt-6 pt-4 border-t border-gray-200">
-                        <h4 class="text-lg font-semibold text-gray-700 mb-2">新增常用標籤</h4>
-                        <div class="flex space-x-2">
-                            <input type="text" id="newTagName" placeholder="標籤名稱，例如：午餐" class="flex-1 p-2 border border-gray-300 rounded-md shadow-sm">
-                            <button onclick="addCustomTag()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                                <i class="fa-solid fa-plus"></i> 加入
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('modal-backdrop').innerHTML = modalContent;
-            document.getElementById('modal-backdrop').classList.remove('hidden');
-            document.getElementById('modal-backdrop').classList.add('flex');
-            
-            // 首次渲染列表
-            renderTagList(member);
+        function renderTargetList() {
+            const targetsList = document.getElementById('targets-list');
+            if (!targetsList) return;
+            targetsList.innerHTML = data.members.map(m => `
+                <label class="flex items-center bg-gray-50 p-3 rounded-xl border border-gray-200 cursor-pointer shadow-sm">
+                    <input type="checkbox" name="expense-target" value="${m.id}" checked class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <span class="ml-2 text-sm font-medium text-gray-700">${m.name}</span>
+                </label>
+            `).join('');
         }
 
-        function closeModal() {
-            document.getElementById('modal-backdrop').classList.add('hidden');
-            document.getElementById('modal-backdrop').classList.remove('flex');
-            currentEditingMemberId = null;
-            // 刷新記帳頁面的 Quick Tags
-            if (currentTab === 'account') renderQuickTags();
-        }
+        function renderFavorites() {
+            const list = document.getElementById('favorites-list');
+            if (!list) return;
 
-        function renderTagList(member) {
-            const container = document.getElementById('tagListContainer');
-            if (!container) return;
-            
-            // 顯示所有全域自定義標籤
-            const tagHtml = data.customTags.map(tag => `
-                <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg bg-white shadow-sm">
-                    <span class="text-gray-800 text-base font-medium flex-1 mr-4">${tag.name}</span>
-                    <div class="flex space-x-2">
-                        <button onclick="renameCustomTag('${tag.key}')" class="text-blue-500 hover:text-blue-700" title="修改名稱"><i class="fa-solid fa-pencil"></i></button>
-                        <button onclick="confirmDeleteCustomTag('${tag.key}')" class="text-red-500 hover:text-red-700" title="刪除"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
+            // 確保第一個是編輯按鈕
+            let html = `<button onclick="openFavoriteModal()" class="text-gray-400 hover:text-indigo-500 text-sm font-bold flex items-center">
+                <i class="fa-solid fa-star mr-1"></i> 編輯常用清單
+            </button>`;
+
+            html += data.favorites.map(f => `
+                <button onclick="useFavorite('${f.id}')" class="bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-600 btn-big">
+                    ${f.category} ${f.title}
+                </button>
             `).join('');
 
-            container.innerHTML = `
-                <p class="text-sm text-gray-500 mb-3">以下列表是所有成員通用的常用標籤清單。</p>
-                <div class="space-y-2 max-h-60 custom-scroll pr-2">
-                    ${tagHtml.length > 0 ? tagHtml : '<p class="text-gray-500">目前沒有常用標籤。</p>'}
+            list.innerHTML = html;
+        }
+
+        function renderFavoriteListEditor() {
+            const editor = document.getElementById('favorite-list-editor');
+            if (!editor) return;
+
+            if (data.favorites.length === 0) {
+                editor.innerHTML = '<div class="text-center text-gray-400 py-4 border-2 border-dashed rounded-xl">尚無常用項目</div>';
+                return;
+            }
+
+            editor.innerHTML = data.favorites.map(f => `
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div class="font-bold text-gray-800">${f.category} ${f.title}</div>
+                    <button onclick="deleteFavoriteItem('${f.id}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
-            `;
-            // V8.9b 優化: 新增輸入框/按鈕移到 Modal 尾部，在 openCustomTagModal 函數中處理
+            `).join('');
+        }
+        
+        function renderTagList(member) {
+            const list = document.getElementById('member-tags-list');
+            if (!list) return;
+            list.innerHTML = data.customTags.map(t => {
+                const isSelected = member.tags.includes(t.key);
+                return `
+                    <button 
+                        onclick="toggleMemberTag('${member.id}', '${t.key}')" 
+                        class="px-3 py-1 rounded-full text-sm font-bold transition-all ${isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+                    >
+                        ${isSelected ? '<i class="fa-solid fa-check mr-1"></i>' : ''} ${t.name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // --- Member Logic ---
+
+        function addMember() {
+            const nameInput = document.getElementById('input-member-name');
+            const name = nameInput.value.trim();
+            if (name === "") { return showToast('請輸入成員名稱', 'warning'); }
+            
+            const newMember = {
+                id: Date.now().toString(),
+                name: name,
+                prepaid: 0,
+                prepaidCurrency: data.baseCurrency,
+                isFeeCollected: false,
+                tags: []
+            };
+            data.members.push(newMember);
+            nameInput.value = '';
+            
+            // 如果是第一個成員，設為公款代墊人
+            if (data.members.length === 1) {
+                data.publicFeeCollectorId = newMember.id;
+            }
+            saveData();
+            showToast(`${name} 加入旅行！`);
+        }
+
+        function deleteMember(id) {
+            showModal('confirm', '確認刪除成員', '刪除成員會同時刪除所有與他相關的花費紀錄，確認嗎？', () => {
+                data.expenses = data.expenses
+                    .filter(e => e.payerId !== id)
+                    .map(e => ({
+                        ...e,
+                        targets: e.targets.filter(tId => tId !== id)
+                    }))
+                    .filter(e => e.targets.length > 0); // 刪除沒有分攤人的費用
+
+                data.members = data.members.filter(m => m.id !== id);
+                
+                // 重設公款代墊人
+                if (data.publicFeeCollectorId === id) {
+                    data.publicFeeCollectorId = data.members.length > 0 ? data.members[0].id : '';
+                }
+
+                saveData();
+                showToast('成員已刪除', 'error');
+            });
+        }
+
+        function switchPublicFeeCollector(id) {
+            data.publicFeeCollectorId = id;
+            saveData();
+            showToast(`公款代墊人已切換`);
+        }
+        
+        function calculatePublicFeeBalance() {
+            const balanceEl = document.getElementById('public-fee-balance');
+            if (!balanceEl) return;
+
+            const publicCollector = data.members.find(m => m.id === data.publicFeeCollectorId);
+            if (!publicCollector) {
+                balanceEl.textContent = 'N/A';
+                return;
+            }
+
+            // 1. 計算所有成員預付的公款 (換算為基準幣別)
+            const totalPrepaid = data.members.reduce((sum, member) => {
+                const rate = getRateToBase(member.prepaidCurrency);
+                return sum + (member.isFeeCollected ? (member.prepaid * rate) : 0);
+            }, 0);
+
+            // 2. 計算所有公款支出 (換算為基準幣別)
+            const totalPublicExpense = data.expenses.reduce((sum, expense) => {
+                // 檢查是否是公款支出 (payerId 為公款代墊人)
+                if (expense.payerId === data.publicFeeCollectorId) {
+                     // expense.exchangeRate is the rate from expense.currency to data.baseCurrency
+                    return sum + (expense.amount * expense.exchangeRate);
+                }
+                return sum;
+            }, 0);
+
+            const balance = totalPrepaid - totalPublicExpense;
+            balanceEl.textContent = balance.toFixed(2);
+            balanceEl.className = `text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'} mt-1`;
+        }
+        
+        function updatePrepaidCurrency(id, currency) {
+            const member = data.members.find(m => m.id === id);
+            if (member) {
+                member.prepaidCurrency = currency;
+                saveData();
+                showToast(`${member.name} 預付幣別已更新為 ${currency}`);
+            }
+        }
+
+        function updatePrepaidAmount(id, amountStr) {
+            const member = data.members.find(m => m.id === id);
+            const amount = parseFloat(amountStr);
+            if (member && !isNaN(amount) && amount >= 0) {
+                member.prepaid = amount;
+                saveData();
+                showToast(`${member.name} 預付金額已更新`);
+            } else {
+                showToast('金額不正確', 'warning');
+                renderMembers(); // 恢復舊值
+            }
+        }
+        
+        function toggleFeeCollected(id) {
+            const member = data.members.find(m => m.id === id);
+            if (member) {
+                member.isFeeCollected = !member.isFeeCollected;
+                saveData();
+                showToast(`${member.name} 公費狀態已更新`);
+            }
+        }
+
+        function batchAddPrepaid() {
+            const amountStr = document.getElementById('batch-prepaid-amount').value;
+            const amount = parseFloat(amountStr);
+
+            if (isNaN(amount) || amount <= 0) {
+                return showToast('請輸入有效的公費金額', 'warning');
+            }
+
+            showModal('confirm', '確認追加公費', `確定所有成員都將預付 ${amount} ${data.baseCurrency} 嗎？`, () => {
+                data.members.forEach(m => {
+                    // 將新追加的金額，以基準幣別計算後加到成員預付中
+                    const currentRate = getRateToBase(m.prepaidCurrency); // Rate from member's prepaid currency to Base
+                    const newPrepaidBase = m.prepaid * currentRate + amount;
+                    m.prepaid = newPrepaidBase / currentRate; // 換算回成員的預付幣別
+                    m.prepaid = parseFloat(m.prepaid.toFixed(2));
+                    m.prepaidCurrency = m.prepaidCurrency; // 保持幣別
+                    m.isFeeCollected = true;
+                });
+                document.getElementById('batch-prepaid-amount').value = '';
+                saveData();
+                showToast('公費追加完成！');
+            });
         }
 
         function addCustomTag() {
-            const newTagName = document.getElementById('newTagName').value.trim();
-            if (!newTagName) {
-                return showToast('❌ 請輸入標籤名稱！');
-            }
-            if (data.customTags.some(t => t.name === newTagName)) {
-                return showToast('❌ 該標籤名稱已存在！');
-            }
-            
-            const newTag = { key: 't' + data.nextTagKey++, name: newTagName };
-            data.customTags.push(newTag);
-            saveData();
-            document.getElementById('newTagName').value = '';
-            
-            // 刷新列表
-            const member = data.members.find(m => m.id === currentEditingMemberId);
-            if(member) renderTagList(member);
-            showToast('✅ 常用標籤已新增！');
-        }
+            const nameInput = document.getElementById('input-tag-name');
+            const name = nameInput.value.trim();
+            if (!name) return showToast('請輸入標籤名稱', 'warning');
 
-        function confirmDeleteCustomTag(key) {
-            const tagName = data.customTags.find(t => t.key === key)?.name || '未知標籤';
-            
-            if (!confirm(`確定要刪除常用標籤「${tagName}」嗎？\n\n刪除後，所有記帳中帶有此標籤的紀錄將不受影響，但您將無法再次從常用清單中快速選擇。`)) {
-                return;
-            }
-            
-            data.customTags = data.customTags.filter(t => t.key !== key);
+            const newTag = {
+                key: name.toLowerCase().replace(/[^a-z0-9]/g, '_') + Date.now().toString().slice(-4),
+                name: name
+            };
+            data.customTags.push(newTag);
+            nameInput.value = '';
             saveData();
-            
-            // 刷新列表
-            const member = data.members.find(m => m.id === currentEditingMemberId);
-            if(member) renderTagList(member);
-            showToast('🗑️ 常用標籤已刪除！');
+            showToast('新標籤已新增');
+        }
+        
+        function deleteCustomTag(key) {
+            showModal('confirm', '確認刪除標籤', '此標籤將從所有成員身上移除，確認刪除嗎？', () => {
+                data.customTags = data.customTags.filter(t => t.key !== key);
+                data.members.forEach(m => {
+                    m.tags = m.tags.filter(tKey => tKey !== key);
+                });
+                saveData();
+                showToast('標籤已刪除', 'error');
+            });
         }
         
         function renameCustomTag(k) { 
-            const t = data.customTags.find(x=>x.key===k); 
-            if(!t) return showToast('❌ 找不到該標籤！');
-            
-            const n = prompt(`將標籤「${t.name}」改名為：`, t.name); 
-            
-            if(n&&n.trim()) { 
-                const newName = n.trim();
-                if (data.customTags.some(tag => tag.name === newName)) {
-                    return showToast('❌ 該標籤名稱已存在！');
-                }
-                
-                t.name=newName; 
+            const t = data.customTags.find(x => x.key === k); 
+            if(!t) return;
+            const n = prompt(`將標籤 "${t.name}" 重命名為：`); 
+            if(n && n.trim()) { 
+                t.name = n.trim(); 
                 saveData(); 
-                
-                // 刷新列表
-                const member = data.members.find(m => m.id === currentEditingMemberId);
-                if(member) renderTagList(member);
-                showToast('✅ 標籤已更名！');
+                renderMembers(); 
+                renderTagList(data.members.find(x => x.id === currentEditingMemberId)); 
+                showToast('標籤名稱已更新');
             } 
         }
 
-        // --- 算錢頁面 (Settlement) ---
-        function renderSettlementPage(container) {
-            const memberBalances = calculateBalances();
-            settlementResult = calculateSettlement(memberBalances);
+        function openMemberTagModal(memberId) {
+            currentEditingMemberId = memberId;
+            const member = data.members.find(m => m.id === memberId);
+            if (!member) return;
 
-            const totalSpent = data.bills.reduce((sum, b) => sum + b.baseAmount, 0).toFixed(2);
+            document.getElementById('member-tag-name').textContent = member.name;
+            renderTagList(member);
+
+            const modal = document.getElementById('member-tag-modal');
+            const panel = modal.querySelector('#tag-panel');
             
-            container.innerHTML = `
-                <h2 class="text-2xl font-bold text-amber-700"><i class="fa-solid fa-calculator mr-2"></i>結算與轉帳計畫</h2>
-                <div class="mb-6 p-4 border border-green-300 bg-green-50 rounded-lg shadow-md">
-                    <p class="text-lg font-semibold text-green-800">總花費 (基準幣別): ${totalSpent} ${data.baseCurrency}</p>
-                    <p class="text-sm text-green-700">成員數: ${data.members.length} 人</p>
-                    <p class="text-sm text-green-700">平均分攤金額: ${(totalSpent / (data.members.length || 1)).toFixed(2)} ${data.baseCurrency}</p>
-                </div>
-
-                <div class="pt-4 border-t border-gray-300 mb-6">
-                    <h3 class="text-xl font-semibold text-amber-800 mb-3">成員結餘狀況 (${data.baseCurrency})</h3>
-                    <div id="balanceList" class="space-y-3">
-                        ${renderBalanceList(memberBalances)}
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-gray-300">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-xl font-semibold text-amber-800">最終轉帳計畫</h3>
-                        <button onclick="copyReport()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors">
-                            <i class="fa-solid fa-copy mr-1"></i>複製報告
-                        </button>
-                    </div>
-                    <div id="settlementPlan" class="space-y-3">
-                        ${renderSettlementPlan(settlementResult)}
-                    </div>
-                </div>
-            `;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                panel.classList.remove('modal-hidden-state');
+                panel.classList.add('modal-visible-state');
+            }, 10);
         }
-        
-        // 1. 計算每個成員的結餘
-        function calculateBalances() {
+
+        function closeMemberTagModal() {
+            const modal = document.getElementById('member-tag-modal');
+            const panel = modal.querySelector('#tag-panel');
+
+            panel.classList.remove('modal-visible-state');
+            panel.classList.add('modal-hidden-state');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentEditingMemberId = null;
+                renderMembers(); // 關閉後更新成員清單
+            }, 250);
+        }
+
+        function toggleMemberTag(memberId, tagKey) {
+            const member = data.members.find(m => m.id === memberId);
+            if (!member) return;
+
+            if (member.tags.includes(tagKey)) {
+                member.tags = member.tags.filter(k => k !== tagKey);
+            } else {
+                member.tags.push(tagKey);
+            }
+            // 不需要 saveData()，因為在 closeMemberTagModal 時會呼叫 renderMembers()
+            renderTagList(member); 
+        }
+
+        // --- Expense Logic ---
+
+        function toggleExpenseType(isPublic) {
+            const payerSelectContainer = document.getElementById('individual-payer-select-container');
+            const publicFeeNote = document.getElementById('public-fee-note');
+            
+            if (isPublic) {
+                payerSelectContainer.classList.add('hidden');
+                publicFeeNote.classList.remove('hidden');
+            } else {
+                payerSelectContainer.classList.remove('hidden');
+                publicFeeNote.classList.add('hidden');
+            }
+        }
+
+        function toggleAllTargets() {
+            const checkboxes = document.querySelectorAll('#targets-list input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+        }
+
+        function addExpense() {
+            const title = document.getElementById('exp-title').value.trim();
+            const amountStr = document.getElementById('exp-amount').value;
+            const currency = document.getElementById('exp-currency').value;
+            const payerSelect = document.getElementById('exp-payer');
+            const isPublicFee = document.getElementById('is-public-fee').checked;
+            const payerId = isPublicFee ? data.publicFeeCollectorId : payerSelect.value;
+            const category = document.getElementById('exp-category').value;
+            const targets = Array.from(document.querySelectorAll('#targets-list input:checked'))
+                                .map(input => input.value);
+
+            const amount = parseFloat(amountStr);
+
+            if (!title || isNaN(amount) || amount <= 0 || !payerId || targets.length === 0) {
+                return showToast('請填寫完整：標題、金額、付款人、分攤人', 'warning');
+            }
+
+            // exchangeRate: Rate from expense currency to data.baseCurrency
+            const exchangeRate = getRateToBase(currency);
+
+            const newExpense = {
+                id: Date.now().toString(),
+                title: title,
+                amount: amount,
+                currency: currency,
+                exchangeRate: exchangeRate, 
+                payerId: payerId,
+                targets: targets,
+                category: category,
+                date: new Date().toISOString().split('T')[0] 
+            };
+
+            data.expenses.unshift(newExpense);
+            
+            document.getElementById('exp-title').value = '';
+            document.getElementById('exp-amount').value = '';
+            document.getElementById('exp-category').value = '';
+            
+            saveData();
+            showToast(`記帳成功！ ${title} ${amount} ${currency}`);
+        }
+
+        function deleteExpense(id) {
+            showModal('confirm', '確認刪除消費', '這筆消費紀錄將會被移除，確認嗎？', () => {
+                data.expenses = data.expenses.filter(e => e.id !== id);
+                saveData();
+                showToast('消費已刪除', 'error');
+            });
+        }
+
+        function openEditModal(id) {
+            currentEditingId = id;
+            const expense = data.expenses.find(e => e.id === id);
+            if (!expense) return;
+
+            document.getElementById('edit-title').value = expense.title;
+            document.getElementById('edit-amount').value = expense.amount;
+            document.getElementById('edit-category').value = expense.category;
+            document.getElementById('edit-date').value = expense.date;
+
+            // 新增：幣別選擇器填充與選中
+            const editCur = document.getElementById('edit-currency');
+            if (editCur) {
+                editCur.innerHTML = ALL_CURRENCIES.map(c => 
+                    `<option value="${c}" ${expense.currency === c ? 'selected' : ''}>${c}</option>`
+                ).join('');
+            }
+            // 結束新增
+
+            const modal = document.getElementById('edit-modal');
+            const panel = document.getElementById('edit-panel');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                panel.classList.remove('modal-hidden-state');
+                panel.classList.add('modal-visible-state');
+            }, 10);
+        }
+
+        function saveEdit() {
+            const expense = data.expenses.find(e => e.id === currentEditingId);
+            if (!expense) return;
+
+            const newTitle = document.getElementById('edit-title').value.trim();
+            const newAmount = parseFloat(document.getElementById('edit-amount').value);
+            const newCurrency = document.getElementById('edit-currency').value; // 新增：取得新的幣別
+            const newCategory = document.getElementById('edit-category').value;
+            const newDate = document.getElementById('edit-date').value;
+
+            if (!newTitle || isNaN(newAmount) || newAmount <= 0) {
+                return showToast('請輸入有效的標題和金額', 'warning');
+            }
+
+            expense.title = newTitle;
+            expense.amount = newAmount;
+            expense.category = newCategory;
+            expense.date = newDate;
+
+            // 新增：如果幣別改變，更新幣別並重新計算匯率
+            if (expense.currency !== newCurrency) {
+                expense.currency = newCurrency;
+                // exchangeRate: Rate from expense.currency to data.baseCurrency, must be recalculated
+                expense.exchangeRate = getRateToBase(newCurrency); 
+            }
+            // 結束新增
+
+            closeEditModal();
+            saveData();
+            showToast('消費已更新');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            const panel = document.getElementById('edit-panel');
+            
+            panel.classList.remove('modal-visible-state');
+            panel.classList.add('modal-hidden-state');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentEditingId = null;
+            }, 250);
+        }
+
+        // --- Favorite Logic ---
+
+        function addFavoriteItem() {
+            const title = document.getElementById('new-favorite-title').value.trim();
+            const category = document.getElementById('new-favorite-category').value.trim();
+            if (!title) return showToast('請輸入名稱', 'warning');
+
+            data.favorites.push({
+                id: Date.now().toString(),
+                title: title,
+                category: category || '💡'
+            });
+
+            document.getElementById('new-favorite-title').value = '';
+            document.getElementById('new-favorite-category').value = '';
+            saveData();
+            renderFavoriteListEditor();
+            showToast('常用項目已新增');
+        }
+
+        function deleteFavoriteItem(id) {
+            data.favorites = data.favorites.filter(f => f.id !== id);
+            saveData();
+            renderFavoriteListEditor();
+            showToast('常用項目已刪除', 'error');
+        }
+
+        function useFavorite(id) {
+            const favorite = data.favorites.find(f => f.id === id);
+            if (!favorite) return;
+
+            document.getElementById('exp-title').value = favorite.title;
+            document.getElementById('exp-category').value = favorite.category;
+
+            switchTab('expenses'); // 切換到記帳頁
+            showToast(`已套用 ${favorite.title}`);
+        }
+
+        function openFavoriteModal() {
+            const modal = document.getElementById('favorite-modal');
+            const panel = document.getElementById('favorite-panel');
+            
+            renderFavoriteListEditor(); 
+
+            modal.classList.remove('hidden'); 
+            
+            setTimeout(() => {
+                panel.classList.remove('modal-hidden-state');
+                panel.classList.add('modal-visible-state');
+            }, 10);
+        }
+
+        function closeFavoriteModal() {
+            const modal = document.getElementById('favorite-modal');
+            const panel = document.getElementById('favorite-panel');
+            
+            panel.classList.remove('modal-visible-state');
+            panel.classList.add('modal-hidden-state');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                renderFavorites(); 
+            }, 250);
+        }
+
+
+        // --- Settlement Logic ---
+
+        function calculateSettlement() {
             const balances = {};
+            const baseCur = data.baseCurrency;
+            
             data.members.forEach(m => {
-                balances[m.id] = {
-                    paid: 0,
-                    shouldPay: 0,
-                    net: 0, // 淨結餘 (paid - shouldPay)
-                    name: m.name
+                balances[m.id] = { 
+                    id: m.id, // 新增 id 欄位以供轉帳計畫使用
+                    name: m.name, 
+                    prepaid: 0, 
+                    spend: 0, 
+                    balance: 0 
                 };
             });
 
-            data.bills.forEach(bill => {
-                // 已付款項
-                if (balances[bill.payerId]) {
-                    balances[bill.payerId].paid += bill.baseAmount;
-                }
+            let totalSpend = 0;
+            let totalPrepaid = 0;
 
-                // 應分攤金額
-                const shareCount = bill.sharerIds.length;
-                if (shareCount > 0) {
-                    const shareAmount = bill.baseAmount / shareCount;
-                    bill.sharerIds.forEach(sharerId => {
-                        if (balances[sharerId]) {
-                            balances[sharerId].shouldPay += shareAmount;
-                        }
-                    });
+            // 1. 計算預付金 (Prepaid)
+            data.members.forEach(m => {
+                const prepaidBase = m.prepaid * getRateToBase(m.prepaidCurrency);
+                if (m.isFeeCollected) {
+                    balances[m.id].prepaid = prepaidBase;
                 }
+                totalPrepaid += prepaidBase;
             });
 
-            // 計算淨結餘
-            Object.values(balances).forEach(b => {
-                b.net = parseFloat((b.paid - b.shouldPay).toFixed(2));
-                b.paid = parseFloat(b.paid.toFixed(2));
-                b.shouldPay = parseFloat(b.shouldPay.toFixed(2));
+            // 2. 計算花費 (Spend)
+            data.expenses.forEach(e => {
+                // 將花費換算為基準幣別 (e.exchangeRate is rate from expense.currency to baseCurrency)
+                const baseAmount = e.amount * e.exchangeRate; 
+                totalSpend += baseAmount;
+                
+                const perPersonSplit = baseAmount / e.targets.length;
+
+                e.targets.forEach(targetId => {
+                    if (balances[targetId]) {
+                        balances[targetId].spend += perPersonSplit;
+                    }
+                });
             });
 
-            return balances;
+            // 3. 計算結算餘額 (Balance)
+            data.members.forEach(m => {
+                // 總代墊金額 = 個人預付公費 + 個人墊付的費用
+                let totalPaid = balances[m.id].prepaid; 
+                data.expenses.filter(e => e.payerId === m.id).forEach(e => {
+                    const baseAmount = e.amount * e.exchangeRate;
+                    // 如果付款人是公款代墊人，且這筆是公款支出，則不重複計入公款代墊人的 totalPaid，因為預付公費中已經包含。
+                    if (e.payerId !== data.publicFeeCollectorId) {
+                        totalPaid += baseAmount;
+                    }
+                });
+                
+                balances[m.id].balance = totalPaid - balances[m.id].spend;
+            });
+            
+            const balancesArray = Object.values(balances);
+
+            // 4. 計算轉帳計畫
+            const plan = simplifySettlement(balancesArray);
+
+            settlementResult = {
+                totalSpend: totalSpend.toFixed(2),
+                totalPrepaid: totalPrepaid.toFixed(2),
+                memberBalances: balancesArray,
+                plan: plan
+            };
+            
+            // 渲染結果
+            renderResult(settlementResult);
         }
-        
-        function renderBalanceList(balances) {
-            const balanceArray = Object.values(balances);
 
-            if (balanceArray.length === 0) {
-                return `<p class="text-gray-500 p-4 border rounded-lg text-center">沒有成員數據。</p>`;
-            }
-
-            return balanceArray.map(b => {
-                const isPositive = b.net > 0;
-                const netAmount = Math.abs(b.net).toFixed(2);
-                const colorClass = isPositive ? 'text-green-700 bg-green-50 border-green-400' : 
-                                   (b.net < 0 ? 'text-red-700 bg-red-50 border-red-400' : 'text-gray-700 bg-gray-50 border-gray-400');
-                const actionText = isPositive ? '應收回' : (b.net < 0 ? '應支付' : '已結清');
-                const icon = isPositive ? 'fa-arrow-up' : (b.net < 0 ? 'fa-arrow-down' : 'fa-check-circle');
-
-                return `
-                    <div class="p-4 rounded-lg shadow-sm border-l-4 ${colorClass}">
-                        <p class="text-lg font-bold">${b.name}</p>
-                        <p class="text-sm">總共支付: ${b.paid} ${data.baseCurrency}</p>
-                        <p class="text-sm">應分攤: ${b.shouldPay} ${data.baseCurrency}</p>
-                        <p class="text-base font-semibold mt-1">
-                            <i class="fa-solid ${icon} mr-1"></i> 淨結餘: ${b.net} ${data.baseCurrency}
-                            <span class="ml-2 font-bold">(${actionText}: ${netAmount} ${data.baseCurrency})</span>
-                        </p>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // 2. 計算轉帳計畫 (貪婪演算法，找到最少交易次數的解)
-        function calculateSettlement(balances) {
-            let debtors = []; // 負債者 (net < 0)
-            let creditors = []; // 債權人 (net > 0)
+        function simplifySettlement(balances) {
             const plan = [];
+            const balancesCopy = balances.map(b => ({ ...b, balance: parseFloat(b.balance.toFixed(2)) })); // 避免浮點數誤差，四捨五入到小數點兩位
+            balancesCopy.sort((a, b) => a.balance - b.balance);
+            
+            let givers = balancesCopy.filter(b => b.balance < -0.01);
+            let receivers = balancesCopy.filter(b => b.balance > 0.01);
 
-            Object.values(balances).forEach(b => {
-                if (b.net < 0) {
-                    debtors.push({ id: data.members.find(m => m.name === b.name)?.id, amount: -b.net, name: b.name });
-                } else if (b.net > 0) {
-                    creditors.push({ id: data.members.find(m => m.name === b.name)?.id, amount: b.net, name: b.name });
-                }
-            });
-
-            // 排序：負債者由少到多，債權人由多到少，以便盡快結清小額
-            debtors.sort((a, b) => a.amount - b.amount);
-            creditors.sort((a, b) => b.amount - a.amount);
-
-            let i = 0; // 債權人 (creditors) 索引
-            let j = 0; // 負債者 (debtors) 索引
-
-            while (i < creditors.length && j < debtors.length) {
-                const creditor = creditors[i];
-                const debtor = debtors[j];
-
-                // 找出最小的交易金額
-                const transactionAmount = Math.min(creditor.amount, debtor.amount);
-
-                if (transactionAmount > 0.01) { // 忽略極小的誤差
+            while (givers.length > 0 && receivers.length > 0) {
+                let giver = givers[0];
+                let receiver = receivers[0];
+                
+                // 取絕對值，因為 giver.balance 是負數
+                const amountToTransfer = Math.min(Math.abs(giver.balance), receiver.balance);
+                
+                if (amountToTransfer > 0.01) {
                     plan.push({
-                        from: debtor.id,
-                        to: creditor.id,
-                        amount: parseFloat(transactionAmount.toFixed(2))
+                        from: giver.id,
+                        to: receiver.id,
+                        amount: amountToTransfer.toFixed(2)
                     });
-
-                    // 更新剩餘金額
-                    creditor.amount -= transactionAmount;
-                    debtor.amount -= transactionAmount;
                 }
 
-                // 移動指針
-                if (creditor.amount <= 0.01) {
-                    i++; // 債權人已收回所有欠款
-                }
-                if (debtor.amount <= 0.01) {
-                    j++; // 負債人已償還所有債務
-                }
+                // 更新餘額
+                giver.balance += amountToTransfer;
+                receiver.balance -= amountToTransfer;
+                
+                // 重新排序並移除已結清的成員
+                givers = givers.filter(b => Math.abs(b.balance) >= 0.01);
+                receivers = receivers.filter(b => Math.abs(b.balance) >= 0.01);
             }
-
-            return { plan: plan, totalSpent: balances.totalSpent };
+            return plan;
         }
-        
-        function renderSettlementPlan(settlement) {
-            const container = document.getElementById('settlementPlan');
-            if (!container) return;
 
-            if (settlement.plan.length === 0) {
-                return `<p class="text-green-600 font-semibold p-4 border border-green-300 rounded-lg text-center"><i class="fa-solid fa-check-circle mr-1"></i> 帳目全部結清囉！不需要任何轉帳。</p>`;
+        function renderResult(result) {
+            if (!result || !data.members.length) {
+                document.getElementById('member-balance-list').innerHTML = '<div class="text-center text-gray-400 py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-xl">成員不足或尚未記帳</div>';
+                document.getElementById('settlement-plan').innerHTML = '';
+                document.getElementById('total-spend').textContent = '0';
+                document.getElementById('total-prepaid').textContent = '0';
+                return;
             }
 
-            return settlement.plan.map((p, index) => {
-                const fromName = data.members.find(m => m.id === p.from)?.name || '未知';
-                const toName = data.members.find(m => m.id === p.to)?.name || '未知';
+            document.getElementById('total-spend').textContent = result.totalSpend;
+            document.getElementById('total-prepaid').textContent = result.totalPrepaid;
+            const baseCur = data.baseCurrency;
+
+            // 渲染成員結算列表
+            const balanceList = document.getElementById('member-balance-list');
+            balanceList.innerHTML = result.memberBalances.map(b => {
+                const statusClass = b.balance > 0.01 ? 'bg-green-100 text-green-700' : 
+                                     b.balance < -0.01 ? 'bg-red-100 text-red-700' : 
+                                     'bg-gray-100 text-gray-700';
+                const statusText = b.balance > 0.01 ? '應收' : 
+                                   b.balance < -0.01 ? '應付' : 
+                                   '結清';
                 
                 return `
-                    <div class="flex items-center p-3 bg-white border border-yellow-300 rounded-lg shadow-sm">
-                        <span class="mr-3 text-lg font-bold text-yellow-700">${index + 1}.</span>
-                        <p class="flex-1 text-base">
-                            **${fromName}** 轉帳給 **${toName}** <br class="sm:hidden">
-                            <span class="font-bold text-xl text-red-600 ml-0 sm:ml-4">${p.amount.toFixed(2)} ${data.baseCurrency}</span>
-                        </p>
+                    <div class="bg-white p-4 rounded-xl shadow-md border-b-4 ${statusClass.includes('green') ? 'border-green-400' : statusClass.includes('red') ? 'border-red-400' : 'border-gray-300'}">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-lg font-bold text-gray-800">${b.name}</h4>
+                            <span class="text-xs ${statusClass} px-3 py-1 rounded-full font-bold">${statusText}</span>
+                        </div>
+                        <div class="flex justify-between items-end mt-2">
+                            <div>
+                                <p class="text-xs text-gray-500">預付總額 (含代墊)</p>
+                                <p class="text-xl font-bold">${b.prepaid.toFixed(2)} ${baseCur}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 text-right">分攤總額</p>
+                                <p class="text-xl font-bold text-red-500">${b.spend.toFixed(2)} ${baseCur}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 text-right">結算餘額</p>
+                                <p class="text-2xl font-bold ${statusClass.includes('green') ? 'text-green-600' : 'text-red-600'}">${b.balance.toFixed(2)} ${baseCur}</p>
+                            </div>
+                        </div>
                     </div>
                 `;
             }).join('');
+
+            // 渲染轉帳計畫
+            const planList = document.getElementById('settlement-plan');
+            if (result.plan.length === 0) {
+                planList.innerHTML = '<div class="text-center text-gray-400 py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 text-lg"><i class="fa-solid fa-check-circle mr-2"></i> 帳目全部結清囉！</div>';
+            } else {
+                planList.innerHTML = result.plan.map(p => {
+                    const fromName = data.members.find(m => m.id === p.from)?.name || '未知';
+                    const toName = data.members.find(m => m.id === p.to)?.name || '未知';
+                    return `
+                        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-md border-b-4 border-indigo-400">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-red-500">${fromName}</span>
+                                <i class="fa-solid fa-arrow-right text-gray-500"></i>
+                                <span class="text-lg font-bold text-green-500">${toName}</span>
+                            </div>
+                            <p class="text-2xl font-bold text-indigo-600">${p.amount} ${baseCur}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // --- Utility Functions (Toast & Modal) ---
+
+        function showToast(msg, type = 'success', duration = 3000) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = toast.querySelector('i');
+            
+            iconEl.className = '';
+            toast.classList.remove('bg-gray-900/90', 'bg-red-600/90', 'bg-yellow-600/90');
+
+            if (type === 'success') {
+                iconEl.classList.add('fa-solid', 'fa-circle-check', 'text-green-400', 'text-2xl');
+                toast.classList.add('bg-gray-900/90');
+            } else if (type === 'error') {
+                iconEl.classList.add('fa-solid', 'fa-circle-xmark', 'text-red-400', 'text-2xl');
+                toast.classList.add('bg-red-600/90');
+            } else if (type === 'warning') {
+                iconEl.classList.add('fa-solid', 'fa-triangle-exclamation', 'text-yellow-400', 'text-2xl');
+                toast.classList.add('bg-yellow-600/90');
+            } else {
+                iconEl.classList.add('fa-solid', 'fa-info', 'text-blue-400', 'text-2xl');
+                toast.classList.add('bg-gray-900/90');
+            }
+            
+            msgEl.textContent = msg;
+
+            // Show
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+
+            // Hide after duration
+            clearTimeout(toast.timer);
+            toast.timer = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -100%)';
+            }, duration);
+        }
+
+        function showModal(type, title, message, onConfirm = null) {
+            const modal = document.getElementById('custom-modal');
+            const panel = modal.querySelector('div:last-child'); 
+            const iconEl = document.getElementById('modal-icon');
+            const titleEl = document.getElementById('modal-title');
+            const messageEl = document.getElementById('modal-message');
+            const actionsEl = document.getElementById('modal-actions');
+
+            currentModal = modal;
+            currentOnConfirm = onConfirm;
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            iconEl.className = '';
+            iconEl.classList.add('mx-auto', 'flex', 'items-center', 'justify-center', 'h-16', 'w-16', 'rounded-full', 'text-3xl');
+            
+            actionsEl.innerHTML = '';
+            
+            if (type === 'confirm') {
+                iconEl.classList.add('bg-red-100', 'text-red-500');
+                iconEl.querySelector('i').className = 'fa-solid fa-triangle-exclamation';
+
+                actionsEl.innerHTML = `
+                    <button onclick="confirmModalAction()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold text-lg shadow hover:bg-red-700 btn-big">確認</button>
+                    <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-lg shadow hover:bg-gray-300 btn-big">取消</button>
+                `;
+            } else { 
+                iconEl.classList.add('bg-blue-100', 'text-blue-500');
+                iconEl.querySelector('i').className = 'fa-solid fa-info';
+                
+                actionsEl.innerHTML = `
+                    <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-lg shadow hover:bg-indigo-700 btn-big">關閉</button>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                panel.classList.remove('modal-hidden-state');
+                panel.classList.add('modal-visible-state');
+            }, 10);
+        }
+
+        function closeModal() {
+            if (!currentModal) return;
+            const panel = currentModal.querySelector('div:last-child');
+            
+            panel.classList.remove('modal-visible-state');
+            panel.classList.add('modal-hidden-state');
+            
+            setTimeout(() => {
+                currentModal.classList.add('hidden');
+                currentModal = null;
+                currentOnConfirm = null;
+            }, 250);
+        }
+
+        function confirmModalAction() {
+            if (currentOnConfirm) {
+                currentOnConfirm();
+            }
+            closeModal();
+        }
+
+        // --- App Flow ---
+
+        function switchTab(tab) {
+            const tabs = ['members', 'expenses', 'result', 'rates', 'settings'];
+            const navItems = {
+                'members': document.getElementById('tab-members'),
+                'expenses': document.getElementById('tab-expenses'),
+                'result': document.getElementById('tab-result'),
+                'rates': document.getElementById('tab-rates'),
+                'settings': document.getElementById('tab-settings'),
+            };
+
+            tabs.forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                if (view) view.classList.add('hidden');
+                if (navItems[t]) {
+                    navItems[t].classList.remove('active', 'text-indigo-400');
+                    navItems[t].classList.add('inactive', 'text-white/60');
+                }
+            });
+
+            const activeView = document.getElementById(`view-${tab}`);
+            const activeButton = document.getElementById(`tab-${tab}`);
+            if (activeView) activeView.classList.remove('hidden');
+            if (activeButton) {
+                activeButton.classList.remove('inactive', 'text-white/60');
+                activeButton.classList.add('active', 'text-indigo-400');
+            }
+
+            if (tab === 'result') {
+                calculateSettlement();
+            }
         }
 
         function copyReport() {
-            if(!settlementResult) return showToast('先去「算錢」頁面喔');
+            if(!settlementResult) return showToast('請先切換到「算錢」頁面喔', 'warning');
             
-            let text = `📅 旅行結算報告 - ${data.tripName}\n`;
-            text += `------------------------------------\n`;
-            text += `總花費 (基準幣別): ${data.bills.reduce((sum, b) => sum + b.baseAmount, 0).toFixed(2)} ${data.baseCurrency}\n\n`;
+            // 使用 generateTextReport 產生完整的純文字報告，但僅限結算部分
+            const baseCur = data.baseCurrency;
+            let text = `📅 旅行結算報告 (${baseCur})\n`;
+            
+            // 總結
+            text += `\n--- 總結 ---\n`;
+            text += `總花費: ${settlementResult.totalSpend} ${baseCur}\n`;
+            text += `總預付/公費: ${settlementResult.totalPrepaid} ${baseCur}\n`;
 
+            // 個人結算
+            text += `\n--- 個人結算 ---\n`;
+            settlementResult.memberBalances.forEach(b => {
+                const status = b.balance > 0.01 ? '應收' : b.balance < -0.01 ? '應付' : '結清';
+                const sign = b.balance > 0.01 ? '+' : '';
+                text += `👤 ${b.name}: ${status} ${sign}${b.balance.toFixed(2)} ${baseCur}\n`;
+            });
+            
+            // 轉帳計畫
+            text += `\n--- 轉帳計畫 ---\n`;
             if (settlementResult.plan.length === 0) {
                 text += `🎉 帳目全部結清囉！`;
             } else { 
-                text += `💸 請大家這樣轉帳：\n\n`; 
                 settlementResult.plan.forEach(p => { 
-                    const f = data.members.find(m=>m.id===p.from)?.name; 
-                    const t = data.members.find(m=>m.id===p.to)?.name; 
-                    text += `👉 ${f} 給 ${t}：$${p.amount.toFixed(2)} ${data.baseCurrency}\n`; 
+                    const f = data.members.find(m => m.id === p.from)?.name; 
+                    const t = data.members.find(m => m.id === p.to)?.name; 
+                    text += `👉 ${f} 給 ${t}：${p.amount} ${baseCur}\n`; 
                 }); 
             }
             
-            // 複製到剪貼簿
             const ta = document.createElement('textarea'); 
             ta.value = text; 
             document.body.appendChild(ta); 
             ta.select(); 
             try { 
                 document.execCommand('copy'); 
-                showToast('✅ 結算報告已複製到剪貼簿！'); 
+                showToast('複製好了！'); 
             } catch(e) { 
-                alert('複製失敗，請手動複製以下文字：\n\n' + text); 
+                alert('複製失敗'); 
             } 
             document.body.removeChild(ta);
         }
 
-        // --- 設定頁面 (Settings) ---
-        function renderSettingsPage(container) {
-            container.innerHTML = `
-                <h2 class="text-2xl font-bold text-amber-700"><i class="fa-solid fa-sliders mr-2"></i>應用程式設定</h2>
-                
-                <div class="space-y-6">
-                    <div class="p-4 border border-purple-300 bg-purple-50 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold text-purple-800 mb-3"><i class="fa-solid fa-list-check mr-2"></i>基礎設定</h3>
-                        
-                        <div class="mb-4">
-                            <label for="tripNameInput" class="block text-sm font-medium text-gray-700">旅行名稱</label>
-                            <input type="text" id="tripNameInput" value="${data.tripName}" placeholder="例如：2024 日本東京之旅" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                            <button onclick="updateTripName()" class="mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-4 rounded-md text-sm transition-colors">儲存名稱</button>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="baseCurrencySelect" class="block text-sm font-medium text-gray-700">基準幣別 (所有計算都將以此幣別為準)</label>
-                            ${renderCurrencySelect('baseCurrencySelect', data.baseCurrency, 'mt-1 w-full')}
-                            <button onclick="updateBaseCurrency()" class="mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-4 rounded-md text-sm transition-colors">設定基準幣別</button>
-                            <p class="text-xs text-red-500 mt-1">變更基準幣別會影響所有歷史紀錄的換算結果！</p>
-                        </div>
-                    </div>
-                    
-                    <div class="p-4 border border-indigo-300 bg-indigo-50 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold text-indigo-800 mb-3"><i class="fa-solid fa-arrow-right-arrow-left mr-2"></i>匯率設定 (兌 ${data.baseCurrency})</h3>
-                        <div id="exchangeRateList" class="space-y-2 mb-4">
-                            ${renderExchangeRates()}
-                        </div>
-                        
-                        <div class="flex space-x-2">
-                            <select id="newCurrencyCode" class="flex-1 p-2 border rounded-md shadow-sm">
-                                ${Object.keys(CURRENCIES).sort().filter(code => code !== data.baseCurrency && !data.exchangeRates[code]).map(code => 
-                                    `<option value="${code}">${code}</option>`
-                                ).join('')}
-                            </select>
-                            <button onclick="addExchangeRate()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors">新增</button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">提示：匯率設定為 1 ${data.baseCurrency} = [輸入值] 外部幣別。</p>
-                    </div>
+        // --- Backup & Restore ---
 
-                    <div class="p-4 border border-red-300 bg-red-50 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold text-red-800 mb-3"><i class="fa-solid fa-database mr-2"></i>資料管理</h3>
-                        
-                        <div class="flex space-x-2 mb-3">
-                            <button onclick="exportData()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-md transition-colors">
-                                <i class="fa-solid fa-file-export mr-1"></i>備份資料 (.json)
-                            </button>
-                            <button onclick="document.getElementById('importFileInput').click()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-md transition-colors">
-                                <i class="fa-solid fa-file-import mr-1"></i>還原資料
-                            </button>
-                        </div>
-                        <input type="file" id="importFileInput" class="hidden" accept=".json" onchange="importData(event)">
-                        
-                        <button onclick="confirmResetAll()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition-colors mt-3">
-                            <i class="fa-solid fa-bomb mr-1"></i>清除所有數據 (重新開始)
-                        </button>
-                    </div>
+        function generateTextReport() {
+            let text = `======================================\n`;
+            text += `  旅行記帳本 - 純文字備份報告\n`;
+            text += `======================================\n\n`;
 
-                    <p class="text-center text-sm text-gray-500 mt-4">
-                        旅行記帳本 ${APP_VERSION} | 最後儲存: ${new Date().toLocaleString()}
-                    </p>
-                </div>
-            `;
-            // 確保設定頁面載入時，基準幣別下拉選單是正確選中的
-            document.getElementById('baseCurrencySelect').value = data.baseCurrency;
-        }
+            text += `📅 備份日期: ${new Date().toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}\n`;
+            text += `💰 基準幣別: ${data.baseCurrency}\n`;
+            text += `--------------------------------------\n\n`;
 
-        function updateTripName() {
-            const newName = document.getElementById('tripNameInput').value.trim();
-            if (!newName) {
-                return showToast('❌ 旅行名稱不能為空！');
+            // 成員清單
+            text += `👥 成員清單 (${data.members.length} 人):\n`;
+            if (data.members.length === 0) {
+                 text += '  (無)\n';
+            } else {
+                data.members.forEach(m => {
+                    const tags = m.tags.map(k => data.customTags.find(t => t.key === k)?.name || k).join(', ');
+                    const prepaidStatus = m.isFeeCollected ? '已交公費' : '未交公費';
+                    text += `  - ${m.name}: 預付 ${m.prepaid.toFixed(2)} ${m.prepaidCurrency} (${prepaidStatus})${tags ? ` | 標籤: ${tags}` : ''}\n`;
+                });
             }
-            data.tripName = newName;
-            saveData();
-            // 重新渲染 Tabs 以更新標題
-            renderTabs(); 
-            // 重新渲染設定頁面以更新底部的版本資訊
-            renderSettingsPage(document.getElementById('content'));
-            showToast('✅ 旅行名稱已更新！');
-        }
+            text += `\n--------------------------------------\n\n`;
 
-        function updateBaseCurrency() {
-            const newBaseCurrency = document.getElementById('baseCurrencySelect').value;
-            
-            if (newBaseCurrency === data.baseCurrency) {
-                return showToast('✨ 基準幣別沒有變更。');
+            // 花費清單
+            text += `🧾 花費紀錄 (${data.expenses.length} 筆):\n`;
+            if (data.expenses.length === 0) {
+                text += '  (無)\n';
+            } else {
+                data.expenses.sort((a, b) => b.id - a.id).forEach((e, index) => {
+                    const payerName = data.members.find(m => m.id === e.payerId)?.name || '未知';
+                    const targetNames = e.targets.map(id => data.members.find(m => m.id === id)?.name || '?').join('、');
+                    const baseAmount = (e.amount * e.exchangeRate).toFixed(2); // e.exchangeRate is rate to Base Currency
+
+                    text += `  ${index + 1}. [${e.category || '無類別'}] ${e.title} (${e.date})\n`;
+                    text += `     - 金額: ${e.amount.toFixed(2)} ${e.currency} (約 ${baseAmount} ${data.baseCurrency})\n`;
+                    text += `     - 代墊: ${payerName}\n`;
+                    text += `     - 分攤: ${targetNames}\n`;
+                });
             }
-            
-            if (!confirm(`確定要將基準幣別從 ${data.baseCurrency} 變更為 ${newBaseCurrency} 嗎？\n\n這將會影響所有歷史花費的換算結果！`)) {
-                // 取消變更，將下拉選單的值改回原來的
-                document.getElementById('baseCurrencySelect').value = data.baseCurrency; 
-                return;
-            }
-
-            const oldBaseCurrency = data.baseCurrency;
-            
-            // 1. 更新資料中的基準幣別
-            data.baseCurrency = newBaseCurrency;
-
-            // 2. 更新匯率表：
-            // 舊基準幣別的匯率變成新的對應值 (1 / 舊基準幣別的舊匯率，相對於新基準幣別)
-            const oldRateInNewBase = data.exchangeRates[oldBaseCurrency] || 1;
-            
-            // 將所有現有匯率重新以新基準幣別計算
-            const newRates = {};
-            // 新基準幣別對自己的匯率永遠是 1
-            newRates[newBaseCurrency] = 1;
-
-            // 重新計算所有舊幣別相對於新基準幣別的匯率
-            Object.keys(data.exchangeRates).forEach(code => {
-                if (code !== newBaseCurrency) {
-                    // (舊幣別兌舊基準幣別的匯率) / (新基準幣別兌舊基準幣別的匯率)
-                    newRates[code] = parseFloat((data.exchangeRates[code] / oldRateInNewBase).toFixed(4));
-                }
-            });
-            data.exchangeRates = newRates;
-            
-            // 3. 重新計算所有記帳的 baseAmount
-            data.bills.forEach(bill => {
-                bill.baseAmount = convertToBase(bill.amount, bill.currency);
-            });
-
-            saveData();
-            // 刷新頁面，確保所有地方都使用新的基準幣別
-            switchTab('settings');
-            showToast(`✅ 基準幣別已成功變更為 ${newBaseCurrency}！`);
+            text += `\n======================================\n`;
+            return text;
         }
 
 
-        function renderExchangeRates() {
-            const base = data.baseCurrency;
-            const ratesHtml = Object.keys(data.exchangeRates).sort().map(code => {
-                if (code === base) return ''; // 基準幣別不顯示
-
-                return `
-                    <div class="flex space-x-2 items-center">
-                        <span class="w-1/4 text-gray-700 font-medium">${code} (1 ${base} = )</span>
-                        <input type="number" step="0.0001" id="rate-${code}" value="${data.exchangeRates[code]}" class="flex-1 p-2 border border-gray-300 rounded-md shadow-sm">
-                        <button onclick="updateExchangeRate('${code}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">更新</button>
-                        <button onclick="removeExchangeRate('${code}')" class="text-red-500 hover:text-red-700" title="移除"><i class="fa-solid fa-times"></i></button>
-                    </div>
-                `;
-            }).join('');
+        function exportData(type) { 
+            let fileContent, fileName, mimeType;
             
-            return ratesHtml || '<p class="text-gray-500">目前沒有其他幣別匯率。</p>';
-        }
-
-        function addExchangeRate() {
-            const code = document.getElementById('newCurrencyCode').value;
-            if (code && !data.exchangeRates[code]) {
-                data.exchangeRates[code] = 1; // 預設為 1:1
-                saveData();
-                renderSettingsPage(document.getElementById('content'));
-                showToast(`✅ 已新增 ${code}，請輸入正確匯率！`);
+            if (type === 'json') {
+                fileContent = JSON.stringify(data);
+                fileName = `旅行記帳本_備份_${new Date().toISOString().split('T')[0]}.json`;
+                mimeType = "application/json";
+            } else if (type === 'text') {
+                fileContent = generateTextReport();
+                fileName = `旅行記帳本_報告_${new Date().toISOString().split('T')[0]}.txt`;
+                mimeType = "text/plain";
+            } else {
+                return; // Should not happen
             }
-        }
 
-        function updateExchangeRate(code) {
-            const newRate = parseFloat(document.getElementById(`rate-${code}`).value);
-            if (isNaN(newRate) || newRate <= 0) {
-                return showToast('❌ 匯率必須是有效的正數！');
-            }
-            
-            data.exchangeRates[code] = newRate;
-            
-            // 重新計算所有記帳的 baseAmount (只重新計算涉及該幣別的帳目)
-            data.bills.forEach(bill => {
-                if (bill.currency === code) {
-                    bill.baseAmount = convertToBase(bill.amount, bill.currency);
-                }
-            });
-
-            saveData();
-            showToast(`✅ ${code} 匯率已更新！`);
-        }
-
-        function removeExchangeRate(code) {
-            if (data.bills.some(b => b.currency === code)) {
-                 return showToast(`❌ 無法移除，仍有記帳使用 ${code} 作為幣別！`);
-            }
-            if (confirm(`確定要移除 ${code} 的匯率設定嗎？`)) {
-                delete data.exchangeRates[code];
-                saveData();
-                renderSettingsPage(document.getElementById('content'));
-                showToast(`🗑️ ${code} 匯率已移除！`);
-            }
-        }
-        
-        function exportData() {
-            const jsonStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonStr], {type: "application/json"});
-            const url = URL.createObjectURL(blob);
+            const b = new Blob([fileContent], {type: mimeType});
+            const u = URL.createObjectURL(b);
             const a = document.createElement('a');
-            
-            // 取得日期時間作為檔名
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
-            
-            a.href = url;
-            a.download = `旅行記帳本_備份_${data.tripName}_${dateStr}.json`;
-            document.body.appendChild(a);
+            a.href = u;
+            a.download = fileName;
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('💾 資料已備份！');
+            URL.revokeObjectURL(u);
+            showToast(`資料已匯出為 ${type.toUpperCase()} 檔案`);
         }
 
-        function importData(event) {
+        function importData(event) { 
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1161,70 +1822,38 @@
             reader.onload = function(e) {
                 try {
                     const importedData = JSON.parse(e.target.result);
-                    
-                    // 執行基本檢查確保是本應用程式的資料格式
-                    if (!importedData.members || !importedData.bills || !importedData.tripName) {
-                        return showToast('❌ 檔案格式錯誤，請確保匯入的是正確的備份 JSON 檔案。');
-                    }
-                    
-                    if (confirm('確定要覆蓋當前所有數據並還原嗎？此操作無法撤銷！')) {
-                        // 執行還原
-                        data = importedData;
-                        saveData();
-                        
-                        // 確保匯率表有基準幣別
-                        data.exchangeRates[data.baseCurrency] = 1;
-
-                        // 重新計算所有 baseAmount (確保匯率正確後，數據能保持一致性)
-                        data.bills.forEach(bill => {
-                            bill.baseAmount = convertToBase(bill.amount, bill.currency);
+                    if (importedData.members && importedData.expenses) {
+                        showModal('confirm', '確認匯入資料', '這將覆蓋所有當前資料，確認匯入嗎？', () => {
+                            data = importedData;
+                            data.exchangeRates['TWD'] = 1.0; // 確保匯率正確
+                            saveData();
+                            showToast('資料已成功匯入', 'success');
                         });
-                        
-                        showToast('🎉 資料還原成功！正在重新載入...');
-                        // 重新初始化所有UI
-                        initApp();
+                    } else {
+                        showToast('匯入失敗：檔案格式不正確', 'error');
                     }
-                } catch (error) {
-                    console.error('匯入數據解析錯誤:', error);
-                    showToast('❌ 匯入檔案解析失敗，請檢查檔案內容。');
+                } catch(error) {
+                    showToast('匯入失敗：檔案解析錯誤', 'error');
                 }
             };
             reader.readAsText(file);
-            // 清空 file input 的值，以便下次能選取同一個檔案
-            event.target.value = ''; 
         }
 
-        function confirmResetAll() {
-            if (confirm('⚠️ 警告！確定要「清除所有數據」並重新開始嗎？此操作將永久刪除所有紀錄，無法還原！')) {
-                if (prompt('請輸入「清除所有」以確認執行:') === '清除所有') {
-                    localStorage.removeItem(STORAGE_KEY);
-                    data = initializeData();
-                    initApp();
-                    showToast('💣 所有數據已清除，已重設為初始狀態！');
-                } else {
-                    showToast('操作已取消。');
-                }
+        function clearData() { 
+            if (localStorageIsAvailable) {
+                localStorage.removeItem(STORAGE_KEY);
             }
-        }
-        
-        // --- 應用程式初始化 ---
-        function initApp() {
-            loadData();
-            // 如果沒有成員，則新增一個預設成員
-            if (data.members.length === 0) {
-                 const initialMember = initializeData().members[0];
-                 data.members.push(initialMember);
-                 data.nextMemberId = 2;
-                 saveData();
-            }
-            renderTabs();
-            // 預設導航到記帳頁面
-            switchTab('account'); 
+            data = {};
+            loadData(); // 重新初始化為預設值
+            saveData();
+            showToast('所有資料已清除', 'success');
+            switchTab('members');
         }
 
-        // 啟動應用
-        initApp();
-        
+        function confirmClearData() {
+            showModal('confirm', '警告：永久刪除', '您確定要清除所有資料嗎？此操作不可逆！', clearData);
+        }
+
     </script>
 </body>
 </html>
